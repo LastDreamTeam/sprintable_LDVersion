@@ -40,4 +40,3 @@ def role_behaviors(role: Any, locale: str) -> str:
     return localized_content(
         getattr(role, "role_behaviors_i18n", None), role.role_behaviors, locale,
     )
-

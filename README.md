@@ -8,6 +8,10 @@
 
 ### 持续交付约定与 2026-10-10 本地化修复
 
+- **22:41（上海时间）部署验收**：Web `fc36dde88083`、Backend `fc9de9b6d4f0` 已切换。公网 HTTPS 实测 3 张既有聊天图片：授权签名、原图、原生 `/_next/image` 均成功；篡改签名仍被拒绝。24 个内置角色的中／英文目录通过检查；女仆长原身份在名单中且持续上报 online，Hermes PID 未改变。没有发送测试消息或调用模型。
+- Web [CI 构建与前端回归](https://github.com/LastDreamTeam/sprintable_LDVersion/actions/runs/38059387611) 成功，包含中英韩撤销确认的交互回归；后端隔离运行 9 组本地化测试通过。不是全站人工逐页点击验收，邮件／技术说明的英文回退和未改写的历史正文仍属明确边界。
+- 现有内置系统播报身份仅把默认韩文名改为“系统通知”，ID、权限、聊天和运行类型不变；一次性操作先备份，再按组织、ID、运行类型及原始默认名精确匹配。不批量改用户自定义姓名或历史消息。
+- 首次切换曾因 standalone 包没有 `.next/cache` 而被 systemd `ReadWritePaths` 拒绝，健康检查自动回切旧 Web／Backend，数据不回灌；部署工具现先创建缓存目录，第二次切换及上述功能验收成功。没有关闭沙箱、扩大可写路径或重启 Hermes。
 - 服务端原生 locale 解析现支持 `zh`、`zh-CN` 等别名，按请求或原生“最早有效 owner”规则选语言；未知语言回退英文，显式韩文仍保留。原生消息目录扩展为 192 项中英韩通知／错误文案，并校验占位符。内置系统通知账号按组织语言创建，旧名称需受控的一次性改名，不重建身份。
 - 24 个内置角色的中文名／职责说明作为独立目录覆盖层载入；不改角色 ID、slug、权限组、运行配置，不覆盖自定义名称及明确提供的翻译。接入技术指令优先原生英文，避免误译工具名或安全约束；邮件正文暂回退原生英文，法律页脚和用户自填／历史内容不自动改写。复盘导出增加中文。
 - 后端隔离验证入口：`.ld/self-hosted/test_backend_locale.py`。测试不配置生产数据库，覆盖目录完整性、占位符、语言协商、24 个角色、实际序列化、权限不变和旧两语言模板兼容。
@@ -30,7 +34,7 @@
 - `main_1`：LD 维护主分支，也是本仓库默认分支。
 - `legacy/main`：原版归档，初始上游基线为 `fd168be8c1484c04e2a179aeb8d8a7383845226a`；不要把它当作部署目标或持续覆盖的工作分支。
 - 上游：[moonklabs/sprintable](https://github.com/moonklabs/sprintable)。中文提交为 `bd316c52766311c7efe3f5939c80043ceee1ab91`，手动构建提交为 `b91c2cbbad27a11503841ebd6eaded2afa57f50c`。
-- 2026-10-10 上海前端仍为 `b91c2cb` 中文构建；Backend 已加载下述 `ld-avatar-20261010` 修复镜像。登录、个人头像 PNG/JPEG/WebP 的申请→PUT→确认→显示→刷新→替换→删除，以及「存储」页的图片／文本上传登记和授权下载，均经真实公网 HTTPS / 网页 BFF 流程验收；聊天 multipart 上传及原生图片上下文下载也已复测。**不是“全站全部功能验收通过”**：未发送孤立文件回收、会议上下文与技能说明仍有下述边界；没有把接口验收说成已人工点击所有浏览器页面。后续文档提交不等于重新部署。
+- 历史验收（当天 22:38 之前）：上海前端为 `b91c2cb` 中文构建；Backend 为 `ld-avatar-20261010`。当时登录、个人头像 PNG/JPEG/WebP 的申请→PUT→确认→显示→刷新→替换→删除，以及「存储」页的图片／文本上传登记和授权下载，均经真实公网 HTTPS / 网页 BFF 流程验收；聊天 multipart 上传及原生图片上下文下载也已复测。**当前版本见上方最新部署回执，不是“全站全部功能验收通过”**：未发送孤立文件回收、会议上下文与技能说明仍有下述边界；没有把接口验收说成已人工点击所有浏览器页面。后续文档提交不等于重新部署。
 - 上海是经批准新建的独立空间，不是美机数据库的完整迁移。美机数据尚待恢复通路后另行比较；不得用旧备份覆盖上海已经产生的新消息和项目数据。
 
 ### 已入库的 LD 改动
@@ -39,7 +43,7 @@
 
 | 改动 | 文件 | 更新时必须保留／复核 |
 | --- | --- | --- |
-| 简体中文词库 | [`apps/web/messages/zh.json`](apps/web/messages/zh.json) | 6,304 个叶子词条；与英文键集合一致，保留 ICU 参数、标签、分支及内联代码。机器翻译加术语修订，不代表逐句人工终审。 |
+| 简体中文词库 | [`apps/web/messages/zh.json`](apps/web/messages/zh.json) | 6,312 个叶子词条（原 6,304 项＋8 项访问确认）；与英文键集合一致，保留 ICU 参数、标签、分支及内联代码。机器翻译加术语修订，不代表逐句人工终审。 |
 | 三语言选择及协商 | [`locale-switcher.tsx`](apps/web/src/components/locale-switcher.tsx)、[`locale-negotiation.ts`](apps/web/src/i18n/locale-negotiation.ts) | 保留 EN / KO / ZH；显式语言 Cookie 优先于浏览器语言，兜底仍为英文，不是强制全站默认中文。 |
 | 字体、元信息、日期 | [`layout.tsx`](apps/web/src/app/layout.tsx)、[`zh-fonts.css`](apps/web/src/app/zh-fonts.css)、[`chat-bubble.tsx`](apps/web/src/components/chat/chat-bubble.tsx)、[`chat-proof-section.tsx`](apps/web/src/components/verify/chat-proof-section.tsx) | 中文系统字体回退、中文网页元信息、随界面语言显示聊天／引用日期。新增字体层不下载字体、不请求在线翻译。 |
 | 法律页面的中文界面标签 | [`privacy/page.tsx`](apps/web/src/app/privacy/page.tsx)、[`refund-policy/page.tsx`](apps/web/src/app/refund-policy/page.tsx)、[`terms/page.tsx`](apps/web/src/app/terms/page.tsx) | 仅标题、导航、空状态等；法律正文、公司信息和联系人未改写，不宣称提供正式法律译本。 |
@@ -50,6 +54,10 @@
 | 组织级头像身份修复 | [`repositories/team_member.py`](backend/app/repositories/team_member.py)、[`routers/team_members.py`](backend/app/routers/team_members.py) | 新增 `get_profile`：个人资料读取／头像接口不再要求无关的 project_access 行。仍核验 org、有效组织成员、本人／主人／管理员与保留 Agent 限制；不借头像操作增加项目权限，也不替换一般项目接口的 `get()`。 |
 | 本地磁盘头像及直传 | [`services/avatar_upload.py`](backend/app/services/avatar_upload.py)、[`services/storage/local.py`](backend/app/services/storage/local.py)、[`routers/local_storage.py`](backend/app/routers/local_storage.py)、[`main.py`](backend/app/main.py) | 沿用原生三步上传协议，补齐 BE 签名 PUT 接收器；签名绑定路径、方法、类型、大小和 create-only，流式落盘并原子拒绝覆盖，失败清理临时文件。只公开独立头像容器，正文附件继续鉴权／短期签名。头像 PNG/JPEG/静态 WebP ≤5 MiB，校验真实图片格式；旧头像替换／删除沿用原生清理。 |
 | 回归测试及小镜像叠层 | [`test_ld_local_upload.py`](backend/tests/test_ld_local_upload.py)、[`test_storage_provider.py`](backend/tests/test_storage_provider.py)、[`test_2887_avatar_upload_service.py`](backend/tests/test_2887_avatar_upload_service.py)、[`.ld/self-hosted/Dockerfile.backend-overlay`](.ld/self-hosted/Dockerfile.backend-overlay) | 37 项隔离测试通过，包含并发创建只能成功一次、伪造／过期／类型不符／越界拒绝及 GCS 地址协议不回退。叠层只用于已核实原镜像的低资源热修；正常全量构建仍用 `backend/Dockerfile`，禁止把叠层套到未经核对的新基线。 |
+| 原生缩略图及状态本地化 | [`next.config.ts`](apps/web/next.config.ts)、[`entity-status-labels.ts`](apps/web/src/components/chat/entity-status-labels.ts) 及其调用处 | 本地签名图只放开固定路径的查询串；状态只改显示不改枚举。对应 `ld-image-config.test.ts`、`ld-entity-status-locale.test.ts` 不能丢失。 |
+| 项目访问影响确认 | [`project-access-revoke-dialog.tsx`](apps/web/src/components/settings/project-access-revoke-dialog.tsx)、访问矩阵／成员详情三个入口及三语词库 | 复用原生 ConfirmDialog；取消不请求、确认只撤销弹窗中的记录；`ld-access-revoke.test.tsx` 验证三语交互。必须小幅改动调用处，不是零源码补丁，但未改底层权限 API。 |
+| 服务端中文覆盖层 | [`locales/zh.json`](backend/app/services/locales/zh.json)、[`locales/roles.json`](backend/app/services/locales/roles.json)、`role_template_locale.py`、locale resolver／catalog／recruiter／events／retro 等调用处 | JSON 与最小接线共同维护；24 个原生角色只做显示覆盖，192 项通知保留参数；不以翻译改变授权或工具名。 |
+| 可复用部署与回退 | [`.ld/self-hosted/`](.ld/self-hosted/) 中 `stage_source.py`、`stage_web.py`、`activate_release.py`、`accept_release.py`、`localize_system_publisher.py` | 下文说明输入与实例边界；源码和产物校验后才切换，健康失败只回滚应用，数据库／上传物不覆盖。 |
 
 构建工作流还包含容易遗漏的部署适配：Node 22、锁定 pnpm 9.15.0、冻结依赖安装、单并发构建，以及仅在临时 runner 内修改 `next.config.ts` 的内存／worker 参数。这不是仓库中持久的 `next.config.ts` 改动；上游配置结构变化时工作流会主动失败，必须重新审查，不能删除断言硬套。`NEXT_PUBLIC_*` 当前带有 LD 的构建地址，复制部署前需要核对；有些地址在构建时固化，改运行时 env 不一定足够。构建附件只保留 1 天，**不是长期回滚备份**。继承的其他上游 CI 未整体重写，启用前须检查触发分支、云目标、发布权限和 secrets。
 
@@ -76,6 +84,19 @@
 | 现有 Agent 技能 | Hermes home 的 `skills/devops/sprintable-stream-triage/`、`skills/qqbot-platform/im-channel-onboarding/` | 服务器侧已有排障／接入技能，不随本仓库分发，也不等于完整会议使用技能；已发现的说明缺口见下一节。 |
 
 “外层补丁”仅表示没有直接修改 Hermes 核心文件，**不等于不受上游更新影响**：插件内部接口、事件结构、MCP 工具名、配置 schema 和挂载方式变化都可能破坏兼容性。上海完成的接线验收也不证明美机当前在线或已同步同样状态。
+
+### 部署源码与可复用维护工具
+
+- 服务器 Git 检出位于 `/srv/sprintable/source`，origin 为本 Fork，分支 `main_1`。源码检出与实际 Web、Backend 构建 SHA 分别记录；文档／工具的新提交不冒充重新构建。实例的 `config/DEPLOYMENT.json`、`config/ACCEPTANCE.json` 和私有 `backups/` 才是对应部署／验收记录。
+- 本次服务器到 GitHub Git HTTPS 路由失败，而 API／codeload 可通，因此源码首次通过 `stage_source.py` 在服务器下载公共归档，并重建、严格匹配原始 Git **tree 和 commit SHA**，形成真实浅检出，不伪造提交。Git 路由未修复前，后续小改动通过已核验的增量 `git bundle` 快进；不能声称生产 `git pull` 已通。后续合并上游需按需补齐历史。
+- `.ld/self-hosted/stage_source.py` 从 stdin 接收 `destination`、`repository`、`commit`、`tree`、`raw_commit_base64`；只允许本 Fork 和独立 `sprintable/source` 空目标，不覆盖现有目录。
+- `stage_web.py` 从 stdin 接收 `root`、`source_commit`、短期 `artifact_url`、`artifact_sha256`；服务器直下产物，校验摘要和内层 SHA，暂存到 `releases/web-<SHA>/`，不激活。临时签名链接不得入库／打印，所有大文件和备份留服务器，不经本机中转。
+- `activate_release.py` 参数为 `--root`、`--image`、`--expected-current-image-id`、`--backend-commit`、`--web-stage`、`--backup-verified`；要求独立验证过实际恢复的 `VALIDATION.json`。只切换 `compose.json` 的 Backend 镜像和 `runtime/web`，先创建 Next 缓存目录，保留旧应用／配置；健康失败自动回切，并核对 Hermes PID、MCP／入口／Postgres 容器 ID 未变。不会迁移 schema、删除数据、清 Docker 或修改代理。
+- `accept_release.py --root <部署根> --origin <HTTPS入口>` 从实例私有配置取临时登录凭据，校验角色目录、女仆长原身份／Key、现有非删除图片原图与缩略图、伪造签名拒绝及激活状态；不发送聊天消息、不调用模型。当前验收针对此类已初始化的中文空间及 `agents.shanghai` / `meeting_conversation` 配置，不是任何空实例即插即用的安装器。
+- 应用回退：`python3 .ld/self-hosted/activate_release.py --root <部署根> --rollback <backups/release-时间戳>`。先检查后续更新；只恢复原 Web／Backend 配置，不恢复旧数据库，不抹掉新上传或消息。功能验收失败需人工审查后显式回退，不能把“健康 200”当全部验收。回切旧 Web 时本次缩略图／确认框修复也会暂时撤回。
+- `localize_system_publisher.py` 是有 `--apply` 开关的独立运维工具；须指定准确组织／成员 UUID、locale 和验证过的备份。普通成员 API 对系统身份的保护不被放开。需要撤销名称变更时，仅按其私有 before/after 回执做单行比对恢复，不能回灌整个业务库。
+- 以上工具当前匹配 `ld-sprintable-*` 服务名、`sprintable-web` 用户和既定回环端口；第二实例须显式调整隔离资源／端口并审查脚本断言。未提供全自动多实例安装器，也不把第一次部署时的私有配置纳入公开仓库。
+- 新提交遵循 [LDAI_CodeStyleAgentSkill](https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill) 的中文模型／问题／解决三段规范，保留真实贡献和测试边界；这里仅采用提交规范，不引入 Unity 项目结构。2026-10-10 检查本机技能 `0.2.2` 已为远端最新，不需重装，未改自动更新开关。
 
 ### 当前已知缺口与待定默认（不要误报完成）
 

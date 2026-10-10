@@ -10,6 +10,12 @@
   must be parameters or private configuration, never committed secrets or user data.
 - Before an upstream merge, review all LD tests and documented compatibility boundaries.
   Updating a branch does not authorize an automatic production restart or data rollback.
+- Follow the owner's LDAI_CodeStyleAgentSkill **commit conventions** for new commits:
+  Chinese `##模型：<actual bot/model> | <specific summary>`, then blank-separated
+  `##问题：` and `##解决：` paragraphs with real validation and its limits. Check actual
+  human contributions before selecting the mixed-contribution header; do not invent
+  model identities, rewrite old commits, or import Unity architecture rules here.
+  Reference: https://github.com/LastDreamTeam/LDAI_CodeStyleAgentSkill
 
 This file documents conventions used by **this repository's own agent contributors**.
 It is an internal convenience, **not** a requirement for customers using Sprintable.
