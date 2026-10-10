@@ -57,6 +57,7 @@ function main() {
   for (const [key, english] of Object.entries(en)) {
     try {
       assert(zh[key].trim().length > 0 || english.trim().length === 0, 'Empty translation');
+      assert(!/[\uac00-\ud7af]/u.test(zh[key]), 'Unexpected Korean text in Chinese UI catalog');
       checkPair(english, zh[key]);
       if (/[\u3400-\u9fff]/u.test(zh[key])) chineseEntries += 1;
     } catch (error) {
@@ -64,6 +65,13 @@ function main() {
     }
   }
   if (errors.length) throw new Error(errors.join('\n'));
+  for (const [key, value] of Object.entries({
+    'settings.messagingPolicyHelper': '智能体',
+    'presence.panelTitle': '团队状态',
+    'recruiter.title': '接入智能体',
+    'board.storyPoints': '工作量点数',
+    'activityLog.filterActor': '操作者',
+  })) assert(zh[key].includes(value), `${key}: LD terminology regressed`);
   console.log(JSON.stringify({ keys: Object.keys(en).length, chineseEntries, errors: 0, offline: true }));
 }
 

@@ -1,5 +1,16 @@
 # AGENTS.md — repo-internal conventions for Sprintable's own agents
 
+## LD fork delivery rule (owner requirement)
+
+- Every LD bug fix, optimization and localization change must land on `main_1`
+  in `LastDreamTeam/sprintable_LDVersion`, with tests and the README change inventory.
+- Do not leave production-only source patches. Deploy a recorded Git commit and
+  verified build artifact; keep production credentials, uploads and database outside Git.
+- Reusable deployment/rollback tooling belongs in `.ld/self-hosted/`; instance values
+  must be parameters or private configuration, never committed secrets or user data.
+- Before an upstream merge, review all LD tests and documented compatibility boundaries.
+  Updating a branch does not authorize an automatic production restart or data rollback.
+
 This file documents conventions used by **this repository's own agent contributors**.
 It is an internal convenience, **not** a requirement for customers using Sprintable.
 (Customer-facing contribution notes live in [`CONTRIBUTING.md`](CONTRIBUTING.md).)

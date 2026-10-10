@@ -3,6 +3,21 @@ name: LD manual runtime bundle
 # Packaging only. No server credentials, deploy step, or automatic push trigger.
 on:
   workflow_dispatch:
+    inputs:
+      public_app_url:
+        description: Public URL for this deployment (no credentials)
+        required: true
+        type: string
+        default: http://localhost:33108
+      backend_url:
+        description: Backend URL reachable by the web server
+        required: true
+        type: string
+        default: http://127.0.0.1:32800
+      build_services:
+        description: Also build the full backend and infrastructure bundle
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -17,8 +32,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      NEXT_PUBLIC_APP_URL: https://cmd.vsingers.com
-      NEXT_PUBLIC_FASTAPI_URL: http://127.0.0.1:32800
+      NEXT_PUBLIC_APP_URL: ${{ inputs.public_app_url }}
+      NEXT_PUBLIC_FASTAPI_URL: ${{ inputs.backend_url }}
       NEXT_TELEMETRY_DISABLED: '1'
       TURBO_TELEMETRY_DISABLED: '1'
       NODE_OPTIONS: --max-old-space-size=4096
@@ -36,7 +51,7 @@ jobs:
         run: |
           node scripts/check-zh-locale.cjs
           cd apps/web
-          pnpm exec vitest run src/i18n/locale-negotiation.test.ts src/i18n/locale-negotiation.guard.test.ts src/i18n/locale-zh.test.ts src/lib/i18n.test.ts
+          pnpm exec vitest run src/i18n/locale-negotiation.test.ts src/i18n/locale-negotiation.guard.test.ts src/i18n/locale-zh.test.ts src/lib/i18n.test.ts src/lib/storage/ld-image-config.test.ts
       - name: Build in isolated hosted runner
         run: |
           node <<'NODE'
@@ -65,7 +80,7 @@ jobs:
           if-no-files-found: error
 
   services:
-    if: github.repository == 'LastDreamTeam/sprintable_LDVersion' && github.ref_name == 'main_1'
+    if: github.repository == 'LastDreamTeam/sprintable_LDVersion' && github.ref_name == 'main_1' && inputs.build_services
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:

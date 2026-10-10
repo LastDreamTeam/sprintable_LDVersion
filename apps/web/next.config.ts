@@ -118,6 +118,13 @@ const nextConfig: NextConfig = {
   // 단위 허용으로 충분 — CSP img-src에도 이미 동일 호스트가 허용돼 있다.
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'storage.googleapis.com' }],
+    // LD: Next 16 rejects local query strings by default. Private disk attachments
+    // require exp/sig; allow them only on the native HMAC-verified read route.
+    // Keep the no-query default for every other local path, and the remote allowlist.
+    localPatterns: [
+      { pathname: '**', search: '' },
+      { pathname: '/api/storage/local/**' },
+    ],
   },
   // Bundle workspace packages from source (resolved via tsconfig paths) rather than
   // externalizing their built dist. The Cloud Build context uploads the host's
