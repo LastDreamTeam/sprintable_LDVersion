@@ -1,6 +1,6 @@
 # Sprintable
 
-> **LDVersion 简体中文**：本分支新增中文界面，保留 English / 한국어。
+> **LDVersion 简体中文与自部署兼容修复**：新增中文界面，保留 English / 한국어；本地头像／文件直传补丁见下文。
 > 安装、验证、上游更新及回滚边界见 [.ld/zh-CN/README.txt](.ld/zh-CN/README.txt)。
 > 此为社区维护的中文 Fork；不包含任何实例的凭据、项目数据或服务器部署配置。
 
@@ -13,12 +13,12 @@
 - `main_1`：LD 维护主分支，也是本仓库默认分支。
 - `legacy/main`：原版归档，初始上游基线为 `fd168be8c1484c04e2a179aeb8d8a7383845226a`；不要把它当作部署目标或持续覆盖的工作分支。
 - 上游：[moonklabs/sprintable](https://github.com/moonklabs/sprintable)。中文提交为 `bd316c52766311c7efe3f5939c80043ceee1ab91`，手动构建提交为 `b91c2cbbad27a11503841ebd6eaded2afa57f50c`。
-- 2026-10-10 上海新空间使用 `b91c2cb` 的应用构建产物，已验证登录、中文、MCP 只读调用及真人消息触发的 Hermes 实际回复；随后通过外部配置修复本地聊天图片上传，并为现有主人账号完成一次管理确认。**不是“全部功能验收通过”**：完整存储界面上传、未发送孤立文件回收、会议上下文与技能说明仍有下述边界。后续文档／维护脚本提交不等于重建应用。
+- 2026-10-10 上海前端仍为 `b91c2cb` 中文构建；Backend 已加载下述 `ld-avatar-20261010` 修复镜像。登录、个人头像 PNG/JPEG/WebP 的申请→PUT→确认→显示→刷新→替换→删除，以及「存储」页的图片／文本上传登记和授权下载，均经真实公网 HTTPS / 网页 BFF 流程验收；聊天 multipart 上传及原生图片上下文下载也已复测。**不是“全站全部功能验收通过”**：未发送孤立文件回收、会议上下文与技能说明仍有下述边界；没有把接口验收说成已人工点击所有浏览器页面。后续文档提交不等于重新部署。
 - 上海是经批准新建的独立空间，不是美机数据库的完整迁移。美机数据尚待恢复通路后另行比较；不得用旧备份覆盖上海已经产生的新消息和项目数据。
 
 ### 已入库的 LD 改动
 
-相对上述上游基线，当前代码差异集中在以下文件；没有新增 LD 后端业务、数据库 schema 或 Hermes 核心补丁。
+相对上述上游基线，当前代码差异集中在以下文件；2026-10-10 晚补充了明确标注的 Sprintable 后端兼容代码，不再是“仅汉化＋配置”。没有数据库 schema 或 Hermes 核心补丁。
 
 | 改动 | 文件 | 更新时必须保留／复核 |
 | --- | --- | --- |
@@ -30,6 +30,9 @@
 | 中文验证及维护说明 | [`locale-zh.test.ts`](apps/web/src/i18n/locale-zh.test.ts)、[`check-zh-locale.cjs`](scripts/check-zh-locale.cjs)、[`.ld/zh-CN/README.txt`](.ld/zh-CN/README.txt)、本 README | 测试不能随合并丢失；翻译来源、质量边界、回滚约定一起保留。 |
 | 独立手动构建 | [`.github/workflows/ld-build-runtime.yml`](.github/workflows/ld-build-runtime.yml) | 仅 `workflow_dispatch`，限定本仓库的 `main_1`；生成网页及服务镜像压缩包、源码提交和校验和，不自动登录或部署服务器。 |
 | 本地原生回收调用器 | [`.ld/self-hosted/storage-maintenance.py`](.ld/self-hosted/storage-maintenance.py) | 仅调用现有 `assets-grace-hard-delete` 接口并输出磁盘告警状态，不发明按文件年龄或“业务价值”删除的策略。需另行安装 systemd 单元及 root-only 凭据，不随 Git 更新自动部署。 |
+| 组织级头像身份修复 | [`repositories/team_member.py`](backend/app/repositories/team_member.py)、[`routers/team_members.py`](backend/app/routers/team_members.py) | 新增 `get_profile`：个人资料读取／头像接口不再要求无关的 project_access 行。仍核验 org、有效组织成员、本人／主人／管理员与保留 Agent 限制；不借头像操作增加项目权限，也不替换一般项目接口的 `get()`。 |
+| 本地磁盘头像及直传 | [`services/avatar_upload.py`](backend/app/services/avatar_upload.py)、[`services/storage/local.py`](backend/app/services/storage/local.py)、[`routers/local_storage.py`](backend/app/routers/local_storage.py)、[`main.py`](backend/app/main.py) | 沿用原生三步上传协议，补齐 BE 签名 PUT 接收器；签名绑定路径、方法、类型、大小和 create-only，流式落盘并原子拒绝覆盖，失败清理临时文件。只公开独立头像容器，正文附件继续鉴权／短期签名。头像 PNG/JPEG/静态 WebP ≤5 MiB，校验真实图片格式；旧头像替换／删除沿用原生清理。 |
+| 回归测试及小镜像叠层 | [`test_ld_local_upload.py`](backend/tests/test_ld_local_upload.py)、[`test_storage_provider.py`](backend/tests/test_storage_provider.py)、[`test_2887_avatar_upload_service.py`](backend/tests/test_2887_avatar_upload_service.py)、[`.ld/self-hosted/Dockerfile.backend-overlay`](.ld/self-hosted/Dockerfile.backend-overlay) | 37 项隔离测试通过，包含并发创建只能成功一次、伪造／过期／类型不符／越界拒绝及 GCS 地址协议不回退。叠层只用于已核实原镜像的低资源热修；正常全量构建仍用 `backend/Dockerfile`，禁止把叠层套到未经核对的新基线。 |
 
 构建工作流还包含容易遗漏的部署适配：Node 22、锁定 pnpm 9.15.0、冻结依赖安装、单并发构建，以及仅在临时 runner 内修改 `next.config.ts` 的内存／worker 参数。这不是仓库中持久的 `next.config.ts` 改动；上游配置结构变化时工作流会主动失败，必须重新审查，不能删除断言硬套。`NEXT_PUBLIC_*` 当前带有 LD 的构建地址，复制部署前需要核对；有些地址在构建时固化，改运行时 env 不一定足够。构建附件只保留 1 天，**不是长期回滚备份**。继承的其他上游 CI 未整体重写，启用前须检查触发分支、云目标、发布权限和 secrets。
 
@@ -51,6 +54,8 @@
 | 旁听／激活信息 | 生效 `runtime.env` | `SPRINTABLE_NONINVOKE_OBSERVATIONS=1`、`SPRINTABLE_ACTIVATION_HEADER=1`。只处理服务端已投递的事件；不能让被 `mentions` 过滤掉的气泡凭空进入上下文。 |
 | 备份、验收与回退 | `/srv/sprintable/scripts/`、`/srv/sprintable/backups/`、`/srv/sprintable/SHANGHAI-DEPLOYMENT-HANDOFF.txt` | 保留一致性备份、校验和、恢复验证及接入切换记录。Gateway 接线回退只恢复接线配置，不回写 Bot 记忆或覆盖 Sprintable 新数据。 |
 | 原生存储回收调度 | `ld-sprintable-storage-maintenance.service` / `.timer`；`/srv/sprintable/scripts/storage-maintenance.py`；`/srv/sprintable/secrets/storage-maintenance.env` | 每天 Asia/Shanghai 04:30＋最多 5 分钟随机延迟，补跑错过的调度；只请求回环 Backend 的原生鉴权回收接口。脚本源码已入库，systemd 单元和密钥仅部署侧保存；磁盘告警只写 journal，不宣称会自动发邮件／QQ。 |
+| 本地头像部署配置 | Backend `GCS_AVATARS_BUCKET=sprintable-avatars`；`data/blobs/sprintable-avatars/`；入口配置 `/api/v2/storage/` 定向回环 Backend | 变量名沿用上游，但 local 下是磁盘子目录，不是 Google 账号／云桶。独立路径仅服务新签名上传和头像读取；不能把整个 blobs 根目录设为公开目录。头像同源相对 URL 不会固化旧主机地址；写入签名基址须与当前网页入口一致。 |
+| 女仆长原生项目归属恢复 | 原生 `POST /api/v2/projects/{project_id}/access`，仅原来的女仆长／项目，普通 member 权限 | 20:36 备份有授权，21:13 备份已经没有；21:05 起发生 `API key member not found`，早于 21:25 的头像修复切换。未找到删除来源证据，不能归责某个人。恢复原授权后旧 Key 恢复 200；未重签 Key、未重建成员／会话、未重启 Hermes。 |
 | 现有 Agent 技能 | Hermes home 的 `skills/devops/sprintable-stream-triage/`、`skills/qqbot-platform/im-channel-onboarding/` | 服务器侧已有排障／接入技能，不随本仓库分发，也不等于完整会议使用技能；已发现的说明缺口见下一节。 |
 
 “外层补丁”仅表示没有直接修改 Hermes 核心文件，**不等于不受上游更新影响**：插件内部接口、事件结构、MCP 工具名、配置 schema 和挂载方式变化都可能破坏兼容性。上海完成的接线验收也不证明美机当前在线或已同步同样状态。
@@ -59,12 +64,22 @@
 
 1. **聊天附件：本地磁盘已修复。** 根因是网页端缺少生产签名密钥与可写持久目录，而后端已有自己的 local 配置。现已令网页 `STORAGE_LOCAL_ROOT=/srv/sprintable/data/blobs` 对应后端 `/data/blobs`，共用已有的非默认签名密钥；后端签名链接改指当前上海 HTTPS 入口，不再指向旧美机域名。用 68 字节测试 PNG 验证真实 HTTPS 上传、消息资产登记、授权下载字节一致、Agent 身份读取该未 @ 消息、原生图片上下文签名及下载；未调用视觉／聊天模型。未授权签名和伪造签名访问均被拒绝。测试消息已按原生接口删除，测试资产已软删除等待宽限期，不删除任何已有用户附件。仅重载 Sprintable Backend 与 Web，Hermes Gateway PID 未变。
 2. **网盘不是对象存储。** [原生存储工厂](apps/web/src/lib/storage/factory.ts) 支持 `local`、`gcs`、`s3` / `minio`；Google Drive 不是 `gcs`，当前无直接 Drive provider。Drive 备份／同步或专门适配器需要另行实施，不应宣称填一个网盘链接即可启用。
-3. **当前会议仅 @ 投递。** 原生 `notification_preferences` 存在全局、项目或会话作用域；本次检查的女仆长全局是 `sse/all`，会议覆盖为 `sse/mentions`，该会话 `free_response=false`。实际按更具体的会话设置执行，普通消息保存在数据库但不会自动成为模型上下文。原生 `all` / `mentions` / `mute` 是投递级别，不是完整的模型发言策略；`free_response=true` 可以放宽 `mentions`，不能解除显式 `mute`。
+3. **消息投递以数据库当前设置为准。** 原生 `notification_preferences` 存在全局、项目或会话作用域。20:37 验收时会议覆盖为 `sse/mentions`；头像修复中发现它已于 21:00:25 改为 `all`，本次未改回、未覆盖这个并发配置。原生 `all` / `mentions` / `mute` 是投递级别，不是完整的模型发言策略；`free_response=true` 可以放宽 `mentions`，不能解除显式 `mute`。测试必须重新读取实际设置，不能按过时的 mentions 假定发送测试消息不会调用模型。
 4. **可读历史不等于自动补齐。** 原生 `sprintable_list_chat_messages` / `sprintable_get_chat_message` 已可用，能按权限读到未 @ 的历史。旁听缓存只适用于已经投递、且明确指定其他收件人的事件；当前原生缓存最多 20 条、每条 500 字，属于内存缓存。没有 `audience` 的广播消息默认算对本 Agent 发言，不能只打开旁听开关就声称实现“所有消息都看、只有 @ 才回复”。
-5. **主人当前选择 B：原生仅 @。** 保留现有会议 `mentions`、`free_response=false`，没有实现 C 的自动拉取／拼接上下文，也没有重写上游全局默认或批量迁移其他会话。前端可随时调整：会话右上角齿轮编辑自己的通知规则；管理员从组织成员的详情页「通知规则摘要 → 编辑」代改指定 Bot 的会话规则，已验证主人可经网页 BFF 读取女仆长实际覆盖项。不要把人类界面的铃铛静音当作 Bot 投递设置。`all` 后由模型选择沉默是另一层行为，仍可能逐条调用模型付费；它不保证无限上下文或永久记忆。当前没有切到 `all` 或更改人设。
+5. **之前选择 B，不等于永久锁死配置。** 没有实现 C 的自动拉取／拼接上下文，也没有重写上游全局默认或批量迁移其他会话。前端可随时调整：会话右上角齿轮编辑自己的通知规则；管理员从组织成员的详情页「通知规则摘要 → 编辑」代改指定 Bot 的会话规则，已验证主人可经网页 BFF 读取女仆长实际覆盖项。不要把人类界面的铃铛静音当作 Bot 投递设置。`all` 后由模型选择沉默是另一层行为，仍可能逐条调用模型付费；它不保证无限上下文或永久记忆。头像修复没有改通知偏好或人设。
 6. **技能说明待校正／补充。** 现有技能偏排障，缺少“被 @ 后读同会话近期历史、读取附件、记录决策与任务交接”的可靠日常流程；其中“不用 @ 一定送达”的说明漏看服务端通知偏好，“90 秒超时一定是后端卡死”的推断也缺少对端地址与维护时间线验证。它们不是官方保证。后续应补足工具发现、权限与上下文预算说明；不能把集成缺口简单归责于 Agent，也不能用技能提示代替需要确定性实现的接入逻辑。
 7. **原生回收不是“所有文件自动过期”。** [`cron.py`](backend/app/routers/cron.py) 的 `assets-grace-hard-delete` 仅回收已经标记 `deleted_at` 且超过 7 天的资产，每次最多 500 个，blob 删除成功后才删除记录；已接本地定时调用。有效聊天／文档／任务引用不会仅因久远而过期，5 分钟／30 分钟签名 URL 的 TTL 也不是文件删除时间。上传后取消发送、尚未登记进资产表的文件不在此原生任务覆盖范围；未增加自定义孤立文件扫描或内容价值分类。`storage-usage-warn` 依赖订阅容量和邮件通道，不能当作自建磁盘的可靠配额／告警；本地脚本只记录磁盘空间。当前系统盘约 85% 已用，主要不是本次附件，未擅自清理其他目录。
-8. **局部存储能力边界。** 当前验收的是会话的服务端 multipart 上传；原生 Local provider 的 `signed_write_url(create_only=True)` 尚未实现，对应「存储」页面的直传、部分头像等签名 PUT 流程不能据此宣称可用。切勿关闭 create-only 安全校验伪装成功。本次不为这些独立流程扩展大段业务代码。
+8. **头像／存储直传现已补齐，但不是纯配置修复。** 上游当前 Local provider 的 create-only 仍返回失败；头像服务还固定 GCS 公共地址，个人资料接口又漏查无项目投影的组织成员。本 Fork 的上述小范围 BE 补丁修复这些缺口，未关闭安全校验。普通直传签名上限 100 MiB，头像 5 MiB；现网聊天 multipart 入口仍有 24 MiB Nginx 上限，没有宣称测过 100 MiB 大文件。未改整个前端、未增 MinIO／其他新常驻服务；用户取消尚未确认的头像和文件仍属于孤立文件回收边界。
+
+### 2026-10-10 头像修复验收与回退
+
+修复前最新数据库备份 `/srv/sprintable/backups/fresh-20261010T131314Z/` 已实际恢复到独立临时库验证；临时库随后删除。配置／旧镜像与验收记录在 `/srv/sprintable/backups/avatar-repair-20261010T132523Z/`，包含 `BEFORE.json`、`APPLIED.json`、`ACCEPTANCE.json`、`CHAT-REGRESSION.json` 和原生项目授权恢复回执。新镜像 ID 为 `sha256:a1ec80c1fc3f44d1903416fed333d747e4a0fcac3e287bf28a998bba0b422d04`；只切换 Sprintable Backend 并热载入其 Nginx 入口，Web、MCP 和 Hermes Gateway 未重启。
+
+验收只临时操作当时为空的主人头像，结束恢复为空；未替主人或女仆长选定图片。测试文件已按原生接口软删除（7 天宽限），未发送的单个测试 blob 已按确切路径清除；没有删除用户上传物。未调用聊天／视觉模型，也未向已改成 all 的会议投递测试消息。
+
+回退命令（须先核对后续修改）：`python3 /srv/sprintable/scripts/deploy-avatar.py --rollback /srv/sprintable/backups/avatar-repair-20261010T132523Z`。它只回切后端镜像、实例 env 和入口配置，不回灌数据库、不删除新上传物、不撤销恢复的女仆长项目归属。旧代码不支持新本地头像路径，回退期间这些头像可能暂不能显示；文件仍保留。部署及验收脚本仅在服务器 `scripts/` 与本地工作目录，不随公开仓库携带账号或数据。
+
+阅读与使用应以 [官方自部署指南](docs/self-hosting.md)、[原生 Hermes 连接器](connectors/hermes-sprintable/README.md)、[组织／项目权限 API](backend/app/routers/project_access.py) 和当前源码交叉核对：组织中能看到 Agent 不等于已授予项目归属，MCP 通不等于 SSE 消息通。官方快速指南的版本／健康路径存在滞后（现网为 Next 16.2.2，Backend 健康路径 `/api/v2/health`）；不要照抄其中 `down -v`、全局网络清理或重建数据库的示例到此生产实例。
 
 本次修复的服务器记录位于 `/srv/sprintable/backups/storage-repair-20261010T123707Z/`，包含配置副本、`APPLIED.json`、`OWNER-CONFIRMATION.json`、`ACCEPTANCE.json`；修复前还完成了新的数据库真实恢复校验。一次性运维脚本为 `scripts/repair-storage.py`、`scripts/verify-owner.py`、`scripts/accept-storage.py`（均在服务器部署根目录下，不随仓库分发）。配置回退入口为 `python3 /srv/sprintable/scripts/repair-storage.py --rollback /srv/sprintable/backups/storage-repair-20261010T123707Z`，执行前仍需审查当前服务状态与后续改动；它不回写数据库或移除新附件，也不自动撤销已授权的账号确认。共享组与目录权限保留以避免破坏后来上传的数据，完全移除须另行审查。
 
@@ -89,7 +104,7 @@ pnpm --filter web type-check
 pnpm --filter web build
 ```
 
-这是一份可审计的维护约定，不是自动防覆盖机制。当前没有新增“README 完整性”CI 门禁；上游升级是否安全仍须以逐项检查与实际验收为准。应用源码仍保持原有汉化差异，本次存储修复使用原生能力＋外部配置／调度，未修改 Hermes 核心、记忆或模型。
+这是一份可审计的维护约定，不是自动防覆盖机制。当前没有新增“README 完整性”CI 门禁；上游升级是否安全仍须以逐项检查与实际验收为准。当前包含汉化、上述 Sprintable 后端兼容修复及外部配置／调度；未修改 Hermes 核心、记忆或模型。上游若补齐同一能力，应通过上述测试后合并／退役 LD 补丁，不能直接覆盖。
 
 ---
 

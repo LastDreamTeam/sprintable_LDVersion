@@ -539,7 +539,7 @@ async def get_team_member(
     id: uuid.UUID,
     repo: TeamMemberRepository = Depends(_get_repo),
 ) -> TeamMemberResponse:
-    member = await repo.get(id)
+    member = await repo.get_profile(id)
     if member is None:
         raise HTTPException(status_code=404, detail="Team member not found")
     return await _inject_online_single(TeamMemberResponse.model_validate(member), member.id)
@@ -617,7 +617,16 @@ async def _assert_can_edit_avatar(
     휴먼=self(프로필 필드 한정)/admin(_assert_can_manage_human) — 새 권한 개념을 만들지
     않는다(페드루 AC 확定)."""
     if member.type == "agent":
-        await assert_agent_owner_mutable(id, session, org_id, uuid.UUID(auth.user_id))
+        if member in session:
+            await assert_agent_owner_mutable(id, session, org_id, uuid.UUID(auth.user_id))
+        else:
+            # LD org-only projection: same owner/admin + reserved-agent policy,
+            # without requiring a project_access row merely to edit an avatar.
+            from app.services.system_publisher_guard import assert_not_system_publisher
+            caller = uuid.UUID(auth.user_id)
+            if member.created_by != caller and not await _is_org_admin(session, org_id, caller):
+                raise HTTPException(status_code=403, detail="Not the owner of this agent")
+            assert_not_system_publisher(member.runtime_type)
     else:
         await _assert_can_manage_human(member, session, org_id, auth, data={"avatar_url": None})
 
@@ -635,7 +644,7 @@ async def create_avatar_upload_url(
     org_id: uuid.UUID = Depends(get_verified_org_id),
 ) -> dict:
     repo = TeamMemberRepository(session, org_id)
-    member = await repo.get(id)
+    member = await repo.get_profile(id)
     if member is None:
         raise HTTPException(status_code=404, detail="Team member not found")
     await _assert_can_edit_avatar(id, member, session, org_id, auth)
@@ -658,7 +667,7 @@ async def confirm_avatar_upload(
     org_id: uuid.UUID = Depends(get_verified_org_id),
 ) -> TeamMemberResponse:
     repo = TeamMemberRepository(session, org_id)
-    member = await repo.get(id)
+    member = await repo.get_profile(id)
     if member is None:
         raise HTTPException(status_code=404, detail="Team member not found")
     await _assert_can_edit_avatar(id, member, session, org_id, auth)
@@ -670,8 +679,9 @@ async def confirm_avatar_upload(
     except AvatarUploadError as e:
         raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message}) from e
     await repo.apply_anchor_update(member, {"avatar_url": new_url})
-    session.expire(member)
-    updated = await repo.get(id)
+    if member in session:
+        session.expire(member)
+    updated = await repo.get_profile(id)
     _m = updated or member
     return await _inject_online_single(TeamMemberResponse.model_validate(_m), _m.id)
 
@@ -684,7 +694,7 @@ async def delete_avatar_endpoint(
     org_id: uuid.UUID = Depends(get_verified_org_id),
 ) -> TeamMemberResponse:
     repo = TeamMemberRepository(session, org_id)
-    member = await repo.get(id)
+    member = await repo.get_profile(id)
     if member is None:
         raise HTTPException(status_code=404, detail="Team member not found")
     await _assert_can_edit_avatar(id, member, session, org_id, auth)
@@ -697,8 +707,9 @@ async def delete_avatar_endpoint(
     except AvatarUploadError as e:
         raise HTTPException(status_code=e.status_code, detail={"code": e.code, "message": e.message}) from e
     await repo.apply_anchor_update(member, {"avatar_url": None})
-    session.expire(member)
-    updated = await repo.get(id)
+    if member in session:
+        session.expire(member)
+    updated = await repo.get_profile(id)
     _m = updated or member
     return await _inject_online_single(TeamMemberResponse.model_validate(_m), _m.id)
 

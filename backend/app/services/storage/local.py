@@ -11,10 +11,12 @@ import hashlib
 import hmac
 import logging
 import os
+import json
+import re
 import time
 from datetime import timedelta
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from .base import StorageProvider
 
@@ -53,11 +55,26 @@ def _signing_secret() -> str:
 
 def _resolve_safe(container: str, object_path: str) -> Path:
     """container/object_path 를 root 아래로 정규화하고 이탈 시 거부(path traversal 차단)."""
-    base = (_root() / container).resolve()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", container):
+        raise ValueError("local storage: invalid container")
+    if not object_path or any(p in ("", ".", "..") for p in object_path.split("/")) or "\\" in object_path:
+        raise ValueError("local storage: invalid object path")
+    root = _root().resolve()
+    base = (root / container).resolve()
+    if root not in base.parents:
+        raise ValueError("local storage: container escapes root")
     target = (base / object_path).resolve()
     if target != base and base not in target.parents:
         raise ValueError("local storage: path traversal blocked")
     return target
+
+
+def write_signature(secret: str, container: str, path: str, exp: int,
+                    content_type: str, max_bytes: int, create_only: bool) -> str:
+    """LD: distinct from both legacy FE PUT and GET capabilities; all constraints signed."""
+    payload = json.dumps(["local-upload-v1", "PUT", container, path, exp,
+                          content_type, max_bytes, create_only], separators=(",", ":"), ensure_ascii=True)
+    return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
 
 class LocalStorageProvider(StorageProvider):
@@ -87,33 +104,27 @@ class LocalStorageProvider(StorageProvider):
         self, container: str, object_path: str, *, ttl: timedelta, content_type: str | None = None,
         create_only: bool = False,
     ) -> str | None:
-        """signed_read_url과 동형이나 payload에 method=PUT을 바인딩(read 서명 재사용 방지).
-        ⚠️ FE `/api/storage/local/...` serve 라우트가 현재 GET만 문서화돼 있어 PUT 수신을
-        지원하려면 FE 측 대응 핸들러가 필요(OSS local provider 후속 — BE 서명 계약만 여기 마련).
+        """LD local upload: streamed BE receiver with signed limits and atomic create-only.
 
-        create_only: story #3249 2라운드(카디르/codex) — PUT 수신 자체가 미구현이라 "생성 전용"
-        조건을 검사할 서버측 핸들러가 없다. 조용히 no-op(성공한 것처럼 URL 발급)하면 "create-only
-        보호가 있다"는 거짓 보장이 되므로 **fail-closed**로 URL 자체를 미발급한다(호출부가 502로
-        거부). 진짜 구현은 story dc3d62f4 별건."""
-        if create_only:
-            logger.warning(
-                "local storage: create_only 미지원(PUT 미구현) — URL 미발급(fail-closed) path=%s", object_path
-            )
-            return None
+        Existing FE GET signatures stay unchanged. No cloud bucket or extra daemon.
+        """
         secret = _signing_secret()
         try:
+            _resolve_safe(container, object_path)
             base = os.environ.get("STORAGE_LOCAL_SERVE_BASE_URL", _DEFAULT_SERVE_BASE).rstrip("/")
             exp = int((time.time() + ttl.total_seconds()) * 1000)
-            payload = f"PUT:{container}/{object_path}:{exp}".encode()
-            sig = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-            qs = urlencode({"exp": exp, "sig": sig, "method": "PUT"})
-            return f"{base}/api/storage/local/{container}/{object_path}?{qs}"
+            content_type = content_type or "application/octet-stream"
+            max_bytes = (5 if container == os.environ.get("GCS_AVATARS_BUCKET") else 100) * 1024 * 1024
+            sig = write_signature(secret, container, object_path, exp, content_type, max_bytes, create_only)
+            qs = urlencode({"exp": exp, "sig": sig, "type": content_type,
+                            "max": max_bytes, "create": int(create_only)})
+            return f"{base}/api/v2/storage/local-upload/{container}/{quote(object_path, safe='/')}?{qs}"
         except Exception:
             logger.warning("local storage: signed write url 생성 실패 path=%s", object_path, exc_info=True)
             return None
 
     def required_write_headers(self, *, create_only: bool = False) -> dict[str, str]:
-        return {}  # local PUT 수신 자체가 미구현(story dc3d62f4 부수 MEDIUM, 별도 후속) — 헤더 계약 없음.
+        return {}  # The create-only condition is signed into the URL, not an optional client header.
 
     async def delete_object(self, container: str, object_path: str) -> bool:
         def _blocking() -> bool:

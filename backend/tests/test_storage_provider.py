@@ -232,14 +232,14 @@ async def test_s3_signed_write_url_create_only_actually_rejects_replay(monkeypat
 
 
 @pytest.mark.anyio
-async def test_local_signed_write_url_create_only_fails_closed(monkeypatch):
-    """local 은 PUT 수신 자체가 미구현 — create_only=True 는 같은 이유로 fail-closed."""
+async def test_local_signed_write_url_binds_create_only(monkeypatch):
+    """LD: create-only is enforced atomically by the dedicated local PUT receiver."""
     monkeypatch.setenv("STORAGE_LOCAL_SIGNING_SECRET", "shared-secret")
     provider = LocalStorageProvider()
     url = await provider.signed_write_url(
         "bucket", "obj/path", ttl=timedelta(minutes=10), content_type="image/png", create_only=True,
     )
-    assert url is None
+    assert url is not None and "/api/v2/storage/local-upload/" in url and "create=1" in url
     # create_only=False(기본)는 기존 동작 무회귀 — URL 발급 계속됨.
     url2 = await provider.signed_write_url(
         "bucket", "obj/path", ttl=timedelta(minutes=10), content_type="image/png",
@@ -262,5 +262,5 @@ def test_required_write_headers_are_provider_specific_not_hardcoded():
 
 async def test_local_download_blocks_path_traversal(monkeypatch, tmp_path):
     monkeypatch.setenv("STORAGE_LOCAL_ROOT", str(tmp_path))
-    with pytest.raises(ValueError, match="traversal"):
+    with pytest.raises(ValueError, match="traversal|invalid object path"):
         await LocalStorageProvider().download_object("c", "../../etc/passwd")

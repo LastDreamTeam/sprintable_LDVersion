@@ -53,6 +53,39 @@ class TeamMemberRepository(BaseRepository[TeamMember]):
         result = await self.session.execute(q.limit(limit))
         return list(result.scalars().all())
 
+    async def get_profile(self, id: uuid.UUID) -> TeamMember | None:
+        """LD: org identity/avatars must not require an unrelated project-access row.
+
+        Only used by profile GET and avatar endpoints. Project mutation/lookups keep
+        their existing get() contract. The fallback is a transient projection, never
+        inserted into the team_members view; writes still use apply_anchor_update.
+        """
+        member = await self.get(id)
+        if member is not None:
+            return member
+        anchor = (await self.session.execute(select(Member).where(
+            Member.id == id, Member.org_id == self.org_id, Member.deleted_at.is_(None),
+        ).execution_options(populate_existing=True))).scalar_one_or_none()
+        if anchor is None:
+            return None
+        role = "member"
+        if anchor.type == "human":
+            from app.models.project import OrgMember
+            role = (await self.session.execute(select(OrgMember.role).where(
+                OrgMember.org_id == self.org_id, OrgMember.user_id == anchor.user_id,
+                OrgMember.deleted_at.is_(None),
+            ))).scalar_one_or_none()
+            if role is None:
+                return None
+        owner = await self.session.get(Member, anchor.owner_member_id) if anchor.owner_member_id else None
+        return TeamMember(id=anchor.id, org_id=anchor.org_id, project_id=uuid.UUID(int=0),
+                          user_id=anchor.user_id, type=anchor.type, name=anchor.name,
+                          role=role, avatar_url=anchor.avatar_url, is_active=anchor.is_active,
+                          color="#3385f8", can_manage_members=False,
+                          created_by=owner.user_id if owner and owner.org_id == self.org_id else None,
+                          runtime_type=anchor.runtime_type, created_at=anchor.created_at,
+                          updated_at=anchor.updated_at)
+
     async def list_org_human_members(
         self, user_id: uuid.UUID | None = None, *, include_departed: bool = False
     ) -> list[dict[str, Any]]:

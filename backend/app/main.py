@@ -539,6 +539,8 @@ app.include_router(deeplink_manifest.router)  # story #1951: 딥링크 계약 �
 app.include_router(onboarding.router)
 app.include_router(activation.router)
 app.include_router(attachments.router)
+from app.routers import local_storage as _ld_local_storage  # noqa: E402
+app.include_router(_ld_local_storage.router)
 app.include_router(notification_preferences.router)
 app.include_router(analytics.router)
 app.include_router(command_center.router)

@@ -27,6 +27,9 @@ logger = logging.getLogger("sprintable.avatar_upload")
 
 AVATARS_BUCKET = os.environ.get("GCS_AVATARS_BUCKET") or None
 _PUBLIC_BASE = f"https://storage.googleapis.com/{AVATARS_BUCKET}/" if AVATARS_BUCKET else None
+if AVATARS_BUCKET and (os.environ.get("STORAGE_PROVIDER", "").strip().lower() or "local") == "local":
+    # Stable same-origin avatar URL; unlike private attachments, avatars are public by design.
+    _PUBLIC_BASE = "/api/v2/storage/local-avatars/"
 
 # 페드루 확定값(2026-08-21).
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
@@ -74,6 +77,7 @@ async def create_upload_url(*, org_id: uuid.UUID, member_id: uuid.UUID, content_
     object_path = _object_path(org_id, member_id, ext)
     upload_url = await get_storage_provider().signed_write_url(
         bucket, object_path, ttl=UPLOAD_URL_TTL, content_type=content_type,
+        create_only=(os.environ.get("STORAGE_PROVIDER", "").strip().lower() or "local") == "local",
     )
     if upload_url is None:
         raise AvatarUploadError(502, "SIGN_FAILED", "업로드 URL 서명 실패")

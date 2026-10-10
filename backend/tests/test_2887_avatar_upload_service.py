@@ -122,7 +122,7 @@ async def test_confirm_upload_succeeds_and_returns_public_url(avatar_service):
     new_url = await avatar_service.confirm_upload(
         org_id=org_id, member_id=member_id, object_path=object_path, previous_avatar_url=None,
     )
-    assert new_url == f"https://storage.googleapis.com/test-avatars-bucket/{object_path}"
+    assert new_url == f"/api/v2/storage/local-avatars/{object_path}"
 
 
 @pytest.mark.asyncio
@@ -142,7 +142,7 @@ async def test_confirm_upload_deletes_old_blob_on_replace():
 
         old_path = f"avatar/{org_id}/{member_id}/{uuid.uuid4().hex}.png"
         await provider.put_object(avatar_service.AVATARS_BUCKET, old_path, b"old", content_type="image/png")
-        old_url = f"https://storage.googleapis.com/test-avatars-bucket/{old_path}"
+        old_url = avatar_service._PUBLIC_BASE + old_path
 
         new_path = f"avatar/{org_id}/{member_id}/{uuid.uuid4().hex}.png"
         await provider.put_object(avatar_service.AVATARS_BUCKET, new_path, b"new", content_type="image/png")
@@ -178,7 +178,7 @@ async def test_confirm_upload_survives_transient_old_blob_delete_failure(avatar_
 
     old_path = f"avatar/{org_id}/{member_id}/{uuid.uuid4().hex}.png"
     await provider.put_object(avatar_service.AVATARS_BUCKET, old_path, b"old", content_type="image/png")
-    old_url = f"https://storage.googleapis.com/test-avatars-bucket/{old_path}"
+    old_url = avatar_service._PUBLIC_BASE + old_path
 
     new_path = f"avatar/{org_id}/{member_id}/{uuid.uuid4().hex}.png"
     await provider.put_object(avatar_service.AVATARS_BUCKET, new_path, b"new", content_type="image/png")
@@ -201,7 +201,7 @@ async def test_delete_avatar_removes_blob(avatar_service):
     object_path = f"avatar/{org_id}/{member_id}/{uuid.uuid4().hex}.png"
     provider = avatar_service.get_storage_provider()
     await provider.put_object(avatar_service.AVATARS_BUCKET, object_path, b"x", content_type="image/png")
-    url = f"https://storage.googleapis.com/test-avatars-bucket/{object_path}"
+    url = avatar_service._PUBLIC_BASE + object_path
 
     await avatar_service.delete_avatar(current_avatar_url=url)
 
