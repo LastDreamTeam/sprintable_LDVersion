@@ -1,0 +1,5 @@
+/* External additive localization overlay. No font download or runtime translator. */
+html[lang="zh"] {
+  --font-sans: "Pretendard Variable", "Pretendard", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC", sans-serif;
+  --font-serif: "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+}

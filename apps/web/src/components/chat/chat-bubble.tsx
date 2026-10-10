@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { hasNoVisibleText, remarkStripHtmlComments, stripHtmlCommentsFromPlainText } from '@/lib/remark-strip-html-comments';
 import { Check, Copy, MessageSquare, Terminal } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import type { ChatMessage } from '@/hooks/use-chat-sse';
 import { AgentIdentity } from '@/components/ui/agent-identity';
 import { commandArgs, commandName, dequoteLiteral, isCommand } from '@/lib/command-classifier';
@@ -407,6 +407,7 @@ export function ChatBubble({
   highlight = false, projectId, isCiteAnchor = false, isCiteInRange = false, citeAction, entityStatusByKey,
   hitlAnswer = null, onRespondHitl, eventDefinitionsByKey, onOpenReadingPanel, onFillComposer, gateByKey,
 }: ChatBubbleProps) {
+  const locale = useLocale();
   const t = useTranslations('chats');
   const tc = useTranslations('common');
   const isAgent = message.sender_type === 'agent';
@@ -446,7 +447,7 @@ export function ChatBubble({
   const cmdName = isCmd ? commandName(message.content) : null;
   const args = isCmd ? commandArgs(message.content) : '';
   const displayName = isMine ? t('you') : (senderLabel || message.sender_name || t('team'));
-  const time = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit' }).format(new Date(message.created_at));
+  const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(new Date(message.created_at));
   const replyCount = message.reply_count ?? 0;
   const lastReplyAt = message.last_reply_at;
 
@@ -539,7 +540,7 @@ export function ChatBubble({
   }, [message, onOpenThread]);
 
   const lastReplyTime = lastReplyAt
-    ? new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit' }).format(new Date(lastReplyAt))
+    ? new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(new Date(lastReplyAt))
     : null;
 
   return (

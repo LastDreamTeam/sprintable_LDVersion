@@ -1,32 +1,34 @@
 'use client';
 
 import { Globe } from 'lucide-react';
-import { useCallback } from 'react';
 import { useLocale } from 'next-intl';
+import { isSupportedLocale } from '@/i18n/locale-negotiation';
 
-function setLocaleCookie(locale: string) {
-  if (typeof window !== 'undefined') {
-    window.document.cookie = `locale=${locale};path=/;max-age=${60 * 60 * 24 * 365}`;
-    window.location.reload();
-  }
-}
+const labels: Record<string, string> = {
+  en: 'Interface language', ko: '화면 언어', zh: '界面语言',
+};
 
 export function LocaleSwitcher({ className = '' }: { className?: string }) {
   const locale = useLocale();
-  const handleToggle = useCallback(() => {
-    const next = locale === 'en' ? 'ko' : 'en';
-    setLocaleCookie(next);
-  }, [locale]);
-
   return (
-    <button
-      type="button"
-      onClick={handleToggle}
-      title={locale === 'en' ? '한국어로 변경' : 'Switch to English'}
-      className={`flex items-center gap-1 rounded-xl px-2 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground ${className}`.trim()}
-    >
-      <Globe className="h-3.5 w-3.5" />
-      <span>{locale.toUpperCase()}</span>
-    </button>
+    <label className={`flex items-center gap-1 rounded-xl px-2 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground ${className}`.trim()}>
+      <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+      <select
+        aria-label={labels[locale] ?? labels.en}
+        title={labels[locale] ?? labels.en}
+        value={locale}
+        className="min-w-0 cursor-pointer rounded bg-background text-foreground outline-offset-2"
+        onChange={(event) => {
+          const next = event.target.value;
+          if (!isSupportedLocale(next)) return;
+          document.cookie = `locale=${next};path=/;max-age=31536000;SameSite=Lax${location.protocol === 'https:' ? ';Secure' : ''}`;
+          window.location.reload();
+        }}
+      >
+        <option value="zh">简体中文</option>
+        <option value="en">English</option>
+        <option value="ko">한국어</option>
+      </select>
+    </label>
   );
 }

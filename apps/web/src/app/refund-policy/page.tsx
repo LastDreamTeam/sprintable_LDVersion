@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { SprintableLogo } from '@/components/brand/sprintable-logo';
 import { DocContentRenderer } from '@/components/docs/doc-content-renderer';
 import { getCurrentLegalDocument } from '@/lib/legal-docs';
@@ -19,6 +19,7 @@ export const revalidate = 300;
 export default async function RefundPolicyPage() {
   const doc = await getCurrentLegalDocument('refund_policy');
   const t = await getTranslations('docs');
+  const isZh = (await getLocale()) === 'zh';
 
   return (
     <div className="min-h-screen bg-muted py-12">
@@ -27,14 +28,14 @@ export default async function RefundPolicyPage() {
           <Link href="/">
             <SprintableLogo variant="mark" className="text-foreground" markClassName="h-8" />
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">환불정책</h1>
+          <h1 className="text-2xl font-bold text-foreground">{isZh ? '退款政策' : '환불정책'}</h1>
         </div>
 
         <div className="rounded-2xl bg-background p-8 shadow-sm">
           {doc ? (
             <>
               <p className="mb-6 text-xs text-muted-foreground">
-                시행일: {formatScheduledAt(doc.effectiveFrom, resolveDisplayTimezone().tz, null).display}
+                {isZh ? '生效日期：' : '시행일: '} {formatScheduledAt(doc.effectiveFrom, resolveDisplayTimezone().tz, null).display}
               </p>
               <DocContentRenderer
                 content={doc.content}
@@ -48,17 +49,17 @@ export default async function RefundPolicyPage() {
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              환불정책을 준비 중입니다. 문의: <a href="mailto:legal@moonklabs.com" className="text-brand-text hover:underline">legal@moonklabs.com</a>
+              {isZh ? '退款政策正在准备中。联系：' : '환불정책을 준비 중입니다. 문의: '} <a href="mailto:legal@moonklabs.com" className="text-brand-text hover:underline">legal@moonklabs.com</a>
             </p>
           )}
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link href="/terms" className="text-brand-text hover:text-brand-text/85">이용약관</Link>
+          <Link href="/terms" className="text-brand-text hover:text-brand-text/85">{isZh ? '服务条款' : '이용약관'}</Link>
           {' · '}
-          <Link href="/privacy" className="text-brand-text hover:text-brand-text/85">개인정보처리방침</Link>
+          <Link href="/privacy" className="text-brand-text hover:text-brand-text/85">{isZh ? '隐私政策' : '개인정보처리방침'}</Link>
           {' · '}
-          <Link href="/register" className="text-brand-text hover:text-brand-text/85">회원가입으로 돌아가기</Link>
+          <Link href="/register" className="text-brand-text hover:text-brand-text/85">{isZh ? '返回注册页' : '회원가입으로 돌아가기'}</Link>
         </p>
 
         <div className="mt-4 text-center text-xs text-muted-foreground">

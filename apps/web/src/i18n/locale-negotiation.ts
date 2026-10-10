@@ -8,7 +8,7 @@
 // 이 모듈은 next/headers를 안 부른다 — 미들웨어(동기 NextRequest)와 RSC(비동기 headers()) 양쪽이 값만 꺼내 넘긴다.
 // 새로 언어를 정하는 자리는 여기 resolveLocale 하나만 읽는다(사본 0 — locale-negotiation.guard.test.ts가 지킨다).
 
-export const SUPPORTED_LOCALES = ['en', 'ko'] as const;
+export const SUPPORTED_LOCALES = ['en', 'ko', 'zh'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export const DEFAULT_LOCALE: SupportedLocale = 'en';
 

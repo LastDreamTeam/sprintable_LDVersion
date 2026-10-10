@@ -1,5 +1,9 @@
 # Sprintable
 
+> **LDVersion 简体中文**：本分支新增中文界面，保留 English / 한국어。
+> 安装、验证、上游更新及回滚边界见 [.ld/zh-CN/README.txt](.ld/zh-CN/README.txt)。
+> 此为社区维护的中文 Fork；不包含任何实例的凭据、项目数据或服务器部署配置。
+
 **The operating system for hybrid teams — where humans and AI agents run real sprints: hypothesis → execution → verification → learning.**
 
 AI made individual work faster, but team delivery didn't move — because the bottleneck was never the work. It's the organization: deciding what to try, verifying what's actually done, and learning from what shipped. Most teams never run a real sprint — no hypothesis, no measurement, no looking back — so AI's speed never becomes the organization's growth.

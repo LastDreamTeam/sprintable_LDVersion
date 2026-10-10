@@ -8,6 +8,7 @@ import { FetchGateInstaller } from '@/components/providers/fetch-gate-installer'
 import { GoogleAnalytics } from '@/components/google-analytics';
 import { resolveAppUrl } from '@/services/app-url';
 import "./globals.css";
+import "./zh-fonts.css";
 
 // story #2745(선생님 지적 2026-08-18, PR#3202 리뷰 유나 확認) — "PM tool"/"AI-powered sprint
 // management"는 옛 포지셔닝(우리는 PM 툴이 아니다). login.subtitle과 같은 철학 정본(개인이
@@ -33,25 +34,27 @@ const sourceSerif = Source_Serif_4({
 // 별도 이미지 미지정 시 OG 폴백 — nextjs metadata 컨벤션).
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
-  const ogImage = locale === 'en'
+  const siteTitle = locale === 'zh' ? 'Sprintable — 与 AI 智能体协作交付' : SITE_TITLE;
+  const siteDescription = locale === 'zh' ? '面向团队的协作工作台：任务看板、聊天、文档、站会、复盘与 MCP，让 AI 智能体成为团队成员。' : SITE_DESCRIPTION;
+  const ogImage = locale !== 'ko'
     ? { url: '/og/opengraph-en.png', alt: 'Sprintable' }
     : { url: '/og/opengraph-ko.png', alt: 'Sprintable' };
 
   return {
     metadataBase: new URL(resolveAppUrl(undefined)),
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    title: siteTitle,
+    description: siteDescription,
     openGraph: {
-      title: SITE_TITLE,
-      description: SITE_DESCRIPTION,
-      locale: locale === 'en' ? 'en_US' : 'ko_KR',
+      title: siteTitle,
+      description: siteDescription,
+      locale: locale === 'zh' ? 'zh_CN' : locale === 'en' ? 'en_US' : 'ko_KR',
       type: 'website',
       images: [{ ...ogImage, width: 1200, height: 630 }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: SITE_TITLE,
-      description: SITE_DESCRIPTION,
+      title: siteTitle,
+      description: siteDescription,
       images: [ogImage.url],
     },
   };

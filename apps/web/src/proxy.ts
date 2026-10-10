@@ -48,6 +48,7 @@ const PUBLIC_EXACT = [
   // /login (caught by the RED test in proxy.test.ts before this line was added).
   '/connect-guide.en.txt',
   '/connect-guide.ko.txt',
+  '/connect-guide.zh.txt',
 ];
 
 // Fully public paths — no token check at all
