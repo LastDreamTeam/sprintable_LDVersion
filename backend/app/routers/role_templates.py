@@ -31,6 +31,7 @@ from app.dependencies.database import get_db
 from app.models.role_template import RoleTemplate
 from app.schemas.a2a import AgentSkill
 from app.services.agent_onboarding_config import resolve_locale_from_request
+from app.services.role_template_locale import role_display, role_behaviors as localized_role_behaviors
 
 router = APIRouter(prefix="/api/v2/role-templates", tags=["role-templates", "Organization"])
 
@@ -52,8 +53,18 @@ _DIVISION_DISPLAY_NAMES_KO: dict[str, str] = {
 }
 
 
+_DIVISION_DISPLAY_NAMES_ZH = {
+    "Content": "内容", "Data": "数据", "Design": "设计", "Engineering": "研发",
+    "Growth": "增长", "Marketing": "营销", "Operations": "运营",
+    "Platform / DevOps": "平台与运维", "Product": "产品", "Quality": "质量",
+    "Sales": "销售", "Security": "安全",
+}
+
+
 def _localize_division(division: str | None, locale: str) -> str | None:
     """알려지지 않은/미래 division 값은 매핑 미스여도 원문 그대로(무회귀 폴백) — reject 안 함."""
+    if locale == "zh":
+        return _DIVISION_DISPLAY_NAMES_ZH.get(division, division)
     if division is None or locale != "ko":
         return division
     return _DIVISION_DISPLAY_NAMES_KO.get(division, division)
@@ -92,9 +103,9 @@ class RoleTemplateDetail(RoleTemplateSummary):
 def _to_summary_response(rt: RoleTemplate, locale: str) -> RoleTemplateSummary:
     """release_notes `_to_response`/`compose_kit`과 동형 폴백 — i18n 오버레이가 그 locale에
     콘텐츠가 없으면 원문으로 무회귀 폴백."""
-    description = (rt.description_i18n or {}).get(locale) or rt.description
+    name, description = role_display(rt, locale)
     return RoleTemplateSummary(
-        id=rt.id, slug=rt.slug, name=rt.name, category=rt.category, description=description,
+        id=rt.id, slug=rt.slug, name=name, category=rt.category, description=description,
         default_tool_groups=rt.default_tool_groups,
         is_builtin=rt.is_builtin,
         tier=rt.tier, version=rt.version, division=_localize_division(rt.division, locale),
@@ -103,10 +114,10 @@ def _to_summary_response(rt: RoleTemplate, locale: str) -> RoleTemplateSummary:
 
 
 def _to_detail_response(rt: RoleTemplate, locale: str) -> RoleTemplateDetail:
-    role_behaviors = (rt.role_behaviors_i18n or {}).get(locale) or rt.role_behaviors
-    description = (rt.description_i18n or {}).get(locale) or rt.description
+    role_behaviors = localized_role_behaviors(rt, locale)
+    name, description = role_display(rt, locale)
     return RoleTemplateDetail(
-        id=rt.id, slug=rt.slug, name=rt.name, category=rt.category, description=description,
+        id=rt.id, slug=rt.slug, name=name, category=rt.category, description=description,
         default_tool_groups=rt.default_tool_groups,
         is_builtin=rt.is_builtin,
         tier=rt.tier, version=rt.version, division=_localize_division(rt.division, locale),

@@ -23,7 +23,7 @@ _DEFAULT_LOCALE = "en"  # story #3778 CHANGES(유나 design:changes) — 화면 
 # request.ts::getLocale()) DEFAULT_LOCALE과 동형. BE는 이 값에 도달할 일이 사실상 없다
 # (BFF가 이제 getLocale() 결과를 항상 Accept-Language로 실어 보낸다 — route.ts 참고) —
 # 그래도 BFF를 안 거치는 직접 호출(API 키 등)이 있을 수 있어 방어값 자체는 남긴다.
-SUPPORTED_LOCALES = ("ko", "en")
+SUPPORTED_LOCALES = ("ko", "en", "zh")
 
 # FE apps/web/messages/{ko,en}.json retro.stage* 그대로(2026-09-10 실측).
 RETRO_PHASE_LABEL: dict[str, dict[str, str]] = {
@@ -68,7 +68,7 @@ def resolve_export_locale(accept_language: str | None) -> str:
     동형"이라 적었으나 거짓이었다(BFF가 쿠키만 읽고 헤더 폴백을 안 태워 기본값이
     실제로 갈렸다·이 함수 docstring도 함께 정정)."""
     if accept_language:
-        normalized = accept_language.strip().lower()
+        normalized = accept_language.strip().lower().replace("_", "-").split("-", 1)[0]
         if normalized in SUPPORTED_LOCALES:
             return normalized
     return _DEFAULT_LOCALE
@@ -96,6 +96,21 @@ def export_string(key: str, locale: str) -> str:
 def votes_label(count: int, locale: str) -> str:
     """apps/web/messages/{ko,en}.json retro.votes 값 그대로 — ko "{count}표" · en은 story #4223부터 ICU 복수형
     "{count, plural, one {# vote} other {# votes}}"(en 규칙: 1만 one)."""
-    if locale == "en":
+    if locale == "zh":
+        return f"{count} 票"
+    if locale != "ko":
         return f"{count} vote" if count == 1 else f"{count} votes"
     return f"{count}표"
+
+
+# OpenAI: display-only extension; retain native export keys and state semantics.
+for _key, _value in {"collect": "收集", "vote": "优先级", "action": "行动", "closed": "关闭"}.items():
+    RETRO_PHASE_LABEL[_key]["zh"] = _value
+ACTION_STATUS_LABEL["open"]["zh"] = "进行中"
+ACTION_STATUS_LABEL["done"]["zh"] = "已完成"
+for _key, _value in {
+    "phase_prefix": "**阶段：**", "section_good": "## 做得好的",
+    "section_bad": "## 有待改进的", "section_improve": "## 改进建议",
+    "section_actions": "## 行动项",
+}.items():
+    EXPORT_STRINGS[_key]["zh"] = _value

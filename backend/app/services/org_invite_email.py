@@ -34,7 +34,7 @@ def _build_invite_html(*, org_name: str, inviter_name: str, accept_link: str, ro
     시안이 그 인디고 헤더 바 자체를 실기기 반증으로 폐기했고(색 fill 위계 → 구분선
     위계) 푸터도 회사정보 SSOT가 중복되던 걸 셸 쪽으로 수렴시켰다."""
     copy = INVITE_COPY[locale]
-    role_display = _en_role_with_article(role) if locale == "en" else role
+    role_display = _en_role_with_article(role) if locale in {"en", "zh"} else role
     body = copy["body"].format(inviter_name=inviter_name, org_name=org_name, role=role, role_display=role_display)
     content = (
         f"<h2 style='margin:0 0 16px;font-size:20px;color:#1a1a1a'>{copy['heading']}</h2>"

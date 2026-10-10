@@ -10,6 +10,8 @@ en 카피는 이 스토리에서 신규 추가 — **유나 검수 대기 초안
 """
 from __future__ import annotations
 
+from copy import deepcopy
+
 TRANSACTIONAL_COPY: dict[str, dict[str, dict]] = {
     "verify_email": {
         "ko": {
@@ -188,3 +190,9 @@ AU_WARN_COPY: dict[str, dict[str, str]] = {
         ),
     },
 }
+
+# LD: request/org locale now recognizes Chinese. Until reviewed Chinese mail
+# templates exist, use the native English copy instead of raising KeyError or
+# falling back to Korean. Keep placeholders and legal footer outside this overlay.
+for _copy in [*TRANSACTIONAL_COPY.values(), REMINDER_COPY, INVITE_COPY, STORAGE_WARN_COPY, AU_WARN_COPY]:
+    _copy["zh"] = deepcopy(_copy["en"])

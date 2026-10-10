@@ -6,6 +6,7 @@ from __future__ import annotations
 import pytest
 
 from app.services.i18n_catalog import MessageCatalog, UnknownMessageKeyError, t
+from app.services.agent_onboarding_config import SUPPORTED_LOCALES
 
 
 # ─── ⭐가드 1 — ko/en 키 집합 불일치 RED(story #3765 죽은 키 클래스 예방) ─────────
@@ -15,7 +16,7 @@ def test_every_catalog_entry_has_exactly_ko_and_en():
     """실 카탈로그의 모든 항목이 정확히 {ko, en} 로케일을 갖는지 — 한쪽만 채워진 키가
     조용히 남는 것(부분 번역 누락)을 막는다."""
     for key in MessageCatalog.keys():
-        assert MessageCatalog.locales_for(key) == {"ko", "en"}, (
+        assert MessageCatalog.locales_for(key) == set(SUPPORTED_LOCALES), (
             f"{key!r}가 ko/en 둘 다를 갖고 있지 않다(가드 1 위반)."
         )
 

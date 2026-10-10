@@ -49,13 +49,24 @@ SUPPORTED_TRANSPORTS = frozenset({STDIO, HTTP})
 # "브라우저 방문자가 아무 신호도 없을 때"의 기본이고, 여긴 반대로 "오늘 유일하게 실
 # 콘텐츠가 존재하는 locale"이 기준 — role_templates/코드 상수 전부 한글이 원본이라
 # en 콘텐츠가 아직 없는 동안은 ko가 안전한 폴백).
-SUPPORTED_LOCALES = ("ko", "en")
-DEFAULT_LOCALE = "ko"
+SUPPORTED_LOCALES = ("ko", "en", "zh")
+# LD: unknown languages use English, never accidentally Korean. Explicit ko remains supported.
+DEFAULT_LOCALE = "en"
 
 
 def resolve_locale(locale: str | None) -> str:
     """미지원/None locale → DEFAULT_LOCALE 폴백(크래시 없이 항상 유효한 locale 반환)."""
-    return locale if locale in SUPPORTED_LOCALES else DEFAULT_LOCALE
+    primary = (locale or "").strip().lower().replace("_", "-").split("-", 1)[0]
+    return primary if primary in SUPPORTED_LOCALES else DEFAULT_LOCALE
+
+
+def template_locale(locale: str | None) -> str:
+    """Legacy two-language technical templates use English for Chinese requests.
+
+    Do not invent translated commands or index a ko/en-only dictionary with zh.
+    Display catalogs with Chinese entries continue to use resolve_locale instead.
+    """
+    return "ko" if resolve_locale(locale) == "ko" else "en"
 
 
 def resolve_locale_from_request(explicit: str | None, accept_language: str | None) -> str:
@@ -70,8 +81,17 @@ def resolve_locale_from_request(explicit: str | None, accept_language: str | Non
     if explicit:
         return resolve_locale(explicit)
     if accept_language:
-        for tag in accept_language.split(","):
-            primary = tag.split(";", 1)[0].strip().split("-", 1)[0].lower()
+        weighted = []
+        for index, tag in enumerate(accept_language.split(",")):
+            parts = tag.split(";")
+            primary = parts[0].strip().replace("_", "-").split("-", 1)[0].lower()
+            try:
+                q = next((float(p.strip()[2:]) for p in parts[1:] if p.strip().lower().startswith("q=")), 1.0)
+            except ValueError:
+                continue
+            if 0 < q <= 1:
+                weighted.append((-q, index, primary))
+        for _, _, primary in sorted(weighted):
             if primary in SUPPORTED_LOCALES:
                 return primary
     return DEFAULT_LOCALE
@@ -237,7 +257,7 @@ def build_connector_guidance(runtime_hint: str | None = None, locale: str = DEFA
     (까심 QA MUST-FIX: dict화 시 실수로 원문 줄바꿈이 사라졌던 걸 복원 — 아래 realdb 테스트가
     아니라 유닛 테스트가 원문 리터럴과 정확히 일치하는지 직접 assert한다).
     """
-    text = _CONNECTOR_GUIDANCE_TEXT[resolve_locale(locale)]
+    text = _CONNECTOR_GUIDANCE_TEXT[template_locale(locale)]
     lines = [text["title"], "", *text["intro"], "", text["adapters_heading"], text["adapters_intro"],
         "hermes-sprintable · openclaw-sprintable · opencode-sprintable · grok-sprintable ·",
         "pi-sprintable · codex-sprintable · cursor-sprintable · gemini-sprintable",
@@ -456,7 +476,7 @@ def build_hermes_mcp_cli_setup(
     류 재발이라 — build_agent_mcp_config()가 만든 config의 값(url/headers 또는 command/args)만
     그대로 가져와 hermes CLI 인자로 재구성한다(값 자체를 새로 만들지 않음 — SSOT 단일화).
     """
-    text = _HTTP_MCP_CLI_SETUP_TEXT[resolve_locale(locale)]
+    text = _HTTP_MCP_CLI_SETUP_TEXT[template_locale(locale)]
     server = mcp_config["mcpServers"]["sprintable-mcp"]  # #2577: renamed from "sprintable"
     if server["type"] == HTTP:
         command = f"hermes mcp add sprintable-mcp --url {server['url']} --auth header"

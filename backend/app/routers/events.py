@@ -2253,6 +2253,8 @@ async def _render_event_message_content(
     # story #4224(까디르 QA 4588 · PO 23:25Z) — «To do»는 에이전트 지시라 원천이 시드다: 단계 메타의 로케일별 action
     # (`action_i18n[locale]` · 도구·게이트 이름 유지)이 있으면 그걸, 없으면 원문 action. 화면용 FE 문안은 쓰지 않는다.
     _localized = (stage_meta.get("action_i18n") or {}).get(resolved_locale) if isinstance(stage_meta.get("action_i18n"), dict) else None
+    if not _localized and resolved_locale != "ko" and isinstance(stage_meta.get("action_i18n"), dict):
+        _localized = stage_meta["action_i18n"].get("en")
     if isinstance(_localized, str) and _localized:
         action = _localized
     rendered_action = await _tokenize_embedded_entity_refs(db, org_id=org_id, text=action)
@@ -3210,7 +3212,8 @@ async def _get_or_create_system_publisher(db: AsyncSession, org_id: uuid.UUID) -
         raise ValueError(f"org {org_id}에 anchor할 project가 없음 — 시스템 발신자 프로비저닝 불가")
 
     ins = pg_insert(Member).values(
-        id=uuid.uuid4(), org_id=org_id, type="agent", name="시스템 발행",
+        id=uuid.uuid4(), org_id=org_id, type="agent",
+        name=t("system.publisher_name", await resolve_org_locale(db, org_id)),
         runtime_type="system-publisher", is_active=True,
     ).on_conflict_do_nothing(
         index_elements=["org_id"],

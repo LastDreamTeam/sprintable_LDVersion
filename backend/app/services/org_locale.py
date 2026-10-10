@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.project import OrgMember
 from app.models.user import User
-from app.services.agent_onboarding_config import DEFAULT_LOCALE, SUPPORTED_LOCALES
+from app.services.agent_onboarding_config import DEFAULT_LOCALE, SUPPORTED_LOCALES, resolve_locale
 
 __all__ = ["resolve_org_locale"]
 
@@ -30,9 +30,13 @@ async def resolve_org_locale(db: AsyncSession, org_id: uuid.UUID) -> str:
             OrgMember.org_id == org_id,
             OrgMember.role == "owner",
             OrgMember.deleted_at.is_(None),
-            User.locale.in_(SUPPORTED_LOCALES),
         )
         .order_by(OrgMember.created_at.asc(), OrgMember.id.asc())
-        .limit(1)
-    )).scalars().first()
-    return rows if rows in SUPPORTED_LOCALES else DEFAULT_LOCALE
+    )).scalars().all()
+    # LD: persisted values include zh-CN. Normalize before matching, and retain
+    # the native earliest-supported-owner policy rather than skipping Chinese owners.
+    for value in rows:
+        primary = (value or "").strip().lower().replace("_", "-").split("-", 1)[0]
+        if primary in SUPPORTED_LOCALES:
+            return resolve_locale(value)
+    return DEFAULT_LOCALE

@@ -1,0 +1,242 @@
+{
+  "accessibility": {
+    "name": "Accessibility Specialist",
+    "zh": {
+      "name": "无障碍专家",
+      "description": "负责无障碍体验审查与合规检查。"
+    },
+    "en": {
+      "description": "Audits accessibility and verifies compliance."
+    }
+  },
+  "ai-engineer": {
+    "name": "AI Engineer",
+    "zh": {
+      "name": "AI 工程师",
+      "description": "负责大模型与机器学习功能的实现、试验和评估。"
+    },
+    "en": {
+      "description": "Implements and evaluates LLM and machine-learning features."
+    }
+  },
+  "backend": {
+    "name": "Backend Engineer",
+    "zh": {
+      "name": "后端工程师",
+      "description": "负责 API、数据模型与服务端业务逻辑的开发和维护。"
+    },
+    "en": {
+      "description": "Builds and maintains APIs, data models, and server-side logic."
+    }
+  },
+  "code-reviewer": {
+    "name": "Code Reviewer",
+    "zh": {
+      "name": "代码审查员",
+      "description": "负责代码变更审查，核对质量标准并反馈问题。"
+    },
+    "en": {
+      "description": "Reviews code changes against quality requirements."
+    }
+  },
+  "data-analyst": {
+    "name": "Data Analyst",
+    "zh": {
+      "name": "数据分析师",
+      "description": "通过数据分析、报表和洞察，为团队决策提供依据。"
+    },
+    "en": {
+      "description": "Analyzes data and produces reports and insights for decisions."
+    }
+  },
+  "data-engineer": {
+    "name": "Data Engineer",
+    "zh": {
+      "name": "数据工程师",
+      "description": "负责数据管道、数据转换与集成流程的建设和维护。"
+    },
+    "en": {
+      "description": "Builds and maintains data pipelines, ETL, and integrations."
+    }
+  },
+  "design-system": {
+    "name": "Design System Engineer",
+    "zh": {
+      "name": "设计系统工程师",
+      "description": "负责设计规范、设计变量与公共组件库的建设和维护。"
+    },
+    "en": {
+      "description": "Maintains design tokens, standards, and shared component libraries."
+    }
+  },
+  "devops": {
+    "name": "DevOps Engineer",
+    "zh": {
+      "name": "DevOps 工程师",
+      "description": "负责持续集成、基础设施与自动化部署流程。"
+    },
+    "en": {
+      "description": "Maintains CI/CD, infrastructure, and deployment pipelines."
+    }
+  },
+  "frontend": {
+    "name": "Frontend Engineer",
+    "zh": {
+      "name": "前端工程师",
+      "description": "负责界面与交互实现，修复前端问题并改善使用体验。"
+    },
+    "en": {
+      "description": "Implements UI and interactions and fixes frontend issues."
+    }
+  },
+  "growth-engineer": {
+    "name": "Growth Engineer",
+    "zh": {
+      "name": "增长工程师",
+      "description": "通过增长试验、转化流程改进和 A/B 测试验证增长方案。"
+    },
+    "en": {
+      "description": "Implements growth experiments, funnel improvements, and A/B tests."
+    }
+  },
+  "growth-hacker": {
+    "name": "Growth Hacker",
+    "zh": {
+      "name": "增长策略专员",
+      "description": "通过数据驱动的试验，探索用户获取与转化优化方案。"
+    },
+    "en": {
+      "description": "Explores data-driven user acquisition and conversion improvements."
+    }
+  },
+  "mobile": {
+    "name": "Mobile Engineer",
+    "zh": {
+      "name": "移动端工程师",
+      "description": "负责 iOS 与 Android 应用的开发和维护。"
+    },
+    "en": {
+      "description": "Develops and maintains iOS and Android applications."
+    }
+  },
+  "performance-marketer": {
+    "name": "Performance Marketer",
+    "zh": {
+      "name": "效果营销专员",
+      "description": "负责付费推广、广告优化，以及转化归因和广告投入产出分析。"
+    },
+    "en": {
+      "description": "Optimizes paid campaigns, attribution, and return on ad spend."
+    }
+  },
+  "pm": {
+    "name": "Product Manager",
+    "zh": {
+      "name": "产品经理",
+      "description": "梳理需求与大型任务，规划迭代，并推动产品假设验证。"
+    },
+    "en": {
+      "description": "Organizes requirements and epics, plans iterations, and validates product hypotheses."
+    }
+  },
+  "product-analyst": {
+    "name": "Product Analyst",
+    "zh": {
+      "name": "产品分析师",
+      "description": "分析产品指标与转化流程，为产品决策提供数据依据。"
+    },
+    "en": {
+      "description": "Analyzes product metrics and funnels to inform decisions."
+    }
+  },
+  "qa": {
+    "name": "QA Engineer",
+    "zh": {
+      "name": "质量保障工程师",
+      "description": "核对验收条件、执行测试并反馈质量问题。"
+    },
+    "en": {
+      "description": "Verifies acceptance criteria and reviews product quality."
+    }
+  },
+  "qa-automation": {
+    "name": "QA Automation Engineer",
+    "zh": {
+      "name": "自动化测试工程师",
+      "description": "建设自动化测试，发现问题并防止已修复的问题复发。"
+    },
+    "en": {
+      "description": "Builds automated tests and prevents regressions."
+    }
+  },
+  "release-manager": {
+    "name": "Release Manager",
+    "zh": {
+      "name": "发布负责人",
+      "description": "规划版本发布，协调部署与发布验收。"
+    },
+    "en": {
+      "description": "Plans releases and coordinates deployment and acceptance."
+    }
+  },
+  "scrum-master": {
+    "name": "Scrum Master",
+    "zh": {
+      "name": "敏捷流程协调员",
+      "description": "跟进迭代进度，协助团队排除阻碍并改进协作流程。"
+    },
+    "en": {
+      "description": "Facilitates iteration progress and removes team impediments."
+    }
+  },
+  "security-engineer": {
+    "name": "Security Engineer",
+    "zh": {
+      "name": "安全工程师",
+      "description": "检查安全漏洞，评估风险并推动安全加固。"
+    },
+    "en": {
+      "description": "Identifies vulnerabilities and drives security hardening."
+    }
+  },
+  "sre": {
+    "name": "SRE",
+    "zh": {
+      "name": "站点可靠性工程师",
+      "description": "负责服务可靠性、监控告警和故障响应。"
+    },
+    "en": {
+      "description": "Maintains service reliability, monitoring, and incident response."
+    }
+  },
+  "technical-writer": {
+    "name": "Technical Writer",
+    "zh": {
+      "name": "技术文档工程师",
+      "description": "编写和维护技术文档、版本说明与使用指南。"
+    },
+    "en": {
+      "description": "Writes and maintains technical documentation, release notes, and guides."
+    }
+  },
+  "ui-designer": {
+    "name": "UI Designer",
+    "zh": {
+      "name": "界面设计师",
+      "description": "负责页面与组件的视觉设计，保持界面风格一致。"
+    },
+    "en": {
+      "description": "Designs screens and components with consistent visual styling."
+    }
+  },
+  "ux-researcher": {
+    "name": "UX Researcher",
+    "zh": {
+      "name": "用户体验研究员",
+      "description": "开展用户研究，验证产品假设并提出体验改进建议。"
+    },
+    "en": {
+      "description": "Researches user needs and validates product and experience hypotheses."
+    }
+  }
+}

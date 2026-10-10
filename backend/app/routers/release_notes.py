@@ -24,6 +24,7 @@ from app.dependencies.auth import get_current_user
 from app.dependencies.database import get_db
 from app.models.release_note import ReleaseNote
 from app.services.agent_onboarding_config import resolve_locale_from_request
+from app.services.role_template_locale import localized_content
 
 router = APIRouter(prefix="/api/v2/release-notes", tags=["release-notes", "Knowledge"])
 
@@ -43,13 +44,13 @@ class ReleaseNoteResponse(BaseModel):
 
 
 def _to_response(row: ReleaseNote, locale: str) -> ReleaseNoteResponse:
-    items = row.items_i18n.get(locale) or row.items
+    items = localized_content(row.items_i18n, row.items, locale)
     return ReleaseNoteResponse(
         id=row.note_key,
         version=row.version,
         publishedAt=row.display_period,
-        title=row.title_i18n.get(locale) or row.title,
-        summary=row.summary_i18n.get(locale) or row.summary,
+        title=localized_content(row.title_i18n, row.title, locale),
+        summary=localized_content(row.summary_i18n, row.summary, locale),
         items=[ReleaseNoteItemModel(**i) if isinstance(i, dict) else i for i in (items or [])],
     )
 

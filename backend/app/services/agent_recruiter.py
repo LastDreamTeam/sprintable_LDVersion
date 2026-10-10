@@ -14,7 +14,8 @@ from __future__ import annotations
 from typing import Any
 
 from app.schemas.a2a import AgentSkill
-from app.services.agent_onboarding_config import MCP_NATIVE_RUNTIMES, resolve_locale
+from app.services.agent_onboarding_config import MCP_NATIVE_RUNTIMES, resolve_locale, template_locale
+from app.services.role_template_locale import role_behaviors as localized_role_behaviors
 from app.services.mcp_toolset import ALL_GROUPS, ALL_TOOL_NAMES, _ALWAYS_ALLOWED, tool_group
 
 # E-I18N Phase A(story 11f1087c, 문서 `i18n-architecture-design-crux`, 선생님 GO 2026-07-08):
@@ -85,7 +86,7 @@ def _tool_cheat_sheet(tool_groups: list[str], locale: str = "ko") -> str:
     실 레지스트리 식별자라 번역 대상 아님(E-I18N Phase A) — 래퍼 텍스트만 locale 분기.
     """
     validate_tool_groups(tool_groups)
-    text = _TOOL_CHEAT_SHEET_TEXT[locale]
+    text = _TOOL_CHEAT_SHEET_TEXT[template_locale(locale)]
     wanted = set(tool_groups)
     always_on = sorted(t for t in ALL_TOOL_NAMES if t in _ALWAYS_ALLOWED)
     by_group: dict[str, list[str]] = {}
@@ -152,7 +153,7 @@ def _runtime_notes(
 
     E-I18N Phase A: 위 문구 전부 locale 분기(코드 상수 — [[no-pr-for-data]] 무관).
     """
-    text = _RUNTIME_NOTES_TEXT[locale]
+    text = _RUNTIME_NOTES_TEXT[template_locale(locale)]
     lines = [text["heading"], "", text["identifier"].format(runtime=runtime)]
     if runtime in MCP_NATIVE_RUNTIMES:
         lines.append(text["mcp_native"])
@@ -234,7 +235,7 @@ def _skills_block(skills: list[dict], locale: str = "ko") -> str:
     onboarding 회귀 0)."""
     if not skills:
         return ""
-    text = _SKILLS_TEXT[locale]
+    text = _SKILLS_TEXT[template_locale(locale)]
     lines = [text["heading"], ""]
     for raw in skills:
         skill = AgentSkill.model_validate(raw)
@@ -291,8 +292,10 @@ def compose_kit(
     (§크럭스 §0: role_behaviors_i18n이 그때 전부 빈 `{}`라 소비해봤자 무의미했음), 이제 PR2에서
     EN 콘텐츠가 채워지면 이 배선이 실효를 갖는다.
     """
-    role_behaviors_i18n = getattr(role_template, "role_behaviors_i18n", None) or {}
-    role_behaviors = role_behaviors_i18n.get(locale) or role_template.role_behaviors
+    role_behaviors = localized_role_behaviors(role_template, locale)
+    # Keep upstream technical instructions and tool names intact until a reviewed
+    # Chinese technical catalog exists. Display descriptions are translated separately.
+    locale = template_locale(locale)
     role_context = (
         _SECTION_A_HEADER[locale].format(name=role_template.name)
         + f"\n\n{role_behaviors}"

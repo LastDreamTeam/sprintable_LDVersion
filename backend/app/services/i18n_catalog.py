@@ -23,6 +23,9 @@ story #3778의 `retro_export_i18n.py`(회고 내보내기 전용 미니 카탈�
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from app.services.agent_onboarding_config import SUPPORTED_LOCALES, resolve_locale
 
 __all__ = ["MessageCatalog", "TIMEZONE_DISPLAY_NAMES", "UnknownMessageKeyError", "t"]
@@ -43,7 +46,7 @@ class UnknownMessageKeyError(KeyError):
 # KeyError(fail-closed — 지어낸 표기를 내느니 죽는 편이 낫다, insight_metrics류
 # "지어내지 않는다" 원칙과 동형).
 TIMEZONE_DISPLAY_NAMES: dict[str, dict[str, str]] = {
-    "America/Los_Angeles": {"ko": "태평양 시간", "en": "Pacific Time"},
+    "America/Los_Angeles": {"ko": "태평양 시간", "en": "Pacific Time", "zh": "太平洋时间"},
 }
 
 
@@ -1044,6 +1047,16 @@ _CATALOG: dict[str, dict[str, str]] = {
 }
 
 
+# LD: extend the native catalog, not a response-rewriting proxy. Missing Chinese
+# entries fall back to English; unknown keys still fail loudly as upstream requires.
+_CATALOG["system.publisher_name"] = {"ko": "시스템 발행", "en": "System notifications", "zh": "系统通知"}
+_ZH_CATALOG = json.loads((Path(__file__).parent / "locales" / "zh.json").read_text(encoding="utf-8"))
+for _key, _text in _ZH_CATALOG.items():
+    if _key not in _CATALOG:
+        raise UnknownMessageKeyError(f"LD Chinese catalog has an unknown key: {_key}")
+    _CATALOG[_key]["zh"] = _text
+
+
 def t(key: str, locale: str, **params: object) -> str:
     """카탈로그 조회 + 렌더. `locale`은 이미 resolve_locale_from_request()를 거친 plain str이어야
     한다(이 함수 자신은 로케일을 재해석하지 않음 — 이중 해석 금지, SSOT는 Phase C 쪽 하나)."""
@@ -1056,7 +1069,7 @@ def t(key: str, locale: str, **params: object) -> str:
             f"i18n_catalog: unregistered key {key!r} — register both ko/en in _CATALOG first."
         )
     resolved_locale = resolve_locale(locale)
-    template = entry.get(resolved_locale, entry[resolved_locale])  # KeyError면 가드1 위반 신호
+    template = entry.get(resolved_locale) or entry["en"]
     return template.format(**params) if params else template
 
 
@@ -1077,7 +1090,6 @@ class MessageCatalog:
         return {k: dict(v) for k, v in _CATALOG.items()}
 
 
-assert set(SUPPORTED_LOCALES) == {"ko", "en"}, (
-    "i18n_catalog assumes SUPPORTED_LOCALES is exactly {ko,en} — if Phase C ever adds a "
-    "locale, this module's guard-1 logic must be updated too (would silently drift otherwise)."
+assert set(SUPPORTED_LOCALES) == {"ko", "en", "zh"}, (
+    "Review catalog fallback and placeholder tests when supported languages change."
 )

@@ -2,9 +2,8 @@
 # Full clean builds continue to use backend/Dockerfile; this contains no dependencies.
 ARG BASE_IMAGE=ld-sprintable-backend:b91c2cbbad27
 FROM ${BASE_IMAGE}
-COPY backend/app/main.py /app/app/main.py
-COPY backend/app/routers/local_storage.py /app/app/routers/local_storage.py
-COPY backend/app/routers/team_members.py /app/app/routers/team_members.py
-COPY backend/app/repositories/team_member.py /app/app/repositories/team_member.py
-COPY backend/app/services/avatar_upload.py /app/app/services/avatar_upload.py
-COPY backend/app/services/storage/local.py /app/app/services/storage/local.py
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=${SOURCE_COMMIT}
+# OpenAI: all application files come from one Git revision, including JSON catalogs.
+# Only use this with the verified matching dependency/schema baseline.
+COPY backend/app /app/app
