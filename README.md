@@ -13,7 +13,7 @@
 - `main_1`：LD 维护主分支，也是本仓库默认分支。
 - `legacy/main`：原版归档，初始上游基线为 `fd168be8c1484c04e2a179aeb8d8a7383845226a`；不要把它当作部署目标或持续覆盖的工作分支。
 - 上游：[moonklabs/sprintable](https://github.com/moonklabs/sprintable)。中文提交为 `bd316c52766311c7efe3f5939c80043ceee1ab91`，手动构建提交为 `b91c2cbbad27a11503841ebd6eaded2afa57f50c`。
-- 2026-10-10 上海新空间使用 `b91c2cb` 的构建产物，已验证登录、中文、MCP 只读调用及真人消息触发的 Hermes 实际回复。**不是“全部功能验收通过”**：附件存储、会议上下文与技能说明仍有下述缺口。
+- 2026-10-10 上海新空间使用 `b91c2cb` 的应用构建产物，已验证登录、中文、MCP 只读调用及真人消息触发的 Hermes 实际回复；随后通过外部配置修复本地聊天图片上传，并为现有主人账号完成一次管理确认。**不是“全部功能验收通过”**：完整存储界面上传、未发送孤立文件回收、会议上下文与技能说明仍有下述边界。后续文档／维护脚本提交不等于重建应用。
 - 上海是经批准新建的独立空间，不是美机数据库的完整迁移。美机数据尚待恢复通路后另行比较；不得用旧备份覆盖上海已经产生的新消息和项目数据。
 
 ### 已入库的 LD 改动
@@ -29,6 +29,7 @@
 | 中文接入指南及公开路由 | [`connect-guide.zh.txt`](apps/web/public/connect-guide.zh.txt)、[`proxy.ts`](apps/web/src/proxy.ts) | 增加中文指南的公开路径，不扩大其他鉴权豁免。指南中的消息行为须同时核对服务端通知偏好，不能只看连接器。 |
 | 中文验证及维护说明 | [`locale-zh.test.ts`](apps/web/src/i18n/locale-zh.test.ts)、[`check-zh-locale.cjs`](scripts/check-zh-locale.cjs)、[`.ld/zh-CN/README.txt`](.ld/zh-CN/README.txt)、本 README | 测试不能随合并丢失；翻译来源、质量边界、回滚约定一起保留。 |
 | 独立手动构建 | [`.github/workflows/ld-build-runtime.yml`](.github/workflows/ld-build-runtime.yml) | 仅 `workflow_dispatch`，限定本仓库的 `main_1`；生成网页及服务镜像压缩包、源码提交和校验和，不自动登录或部署服务器。 |
+| 本地原生回收调用器 | [`.ld/self-hosted/storage-maintenance.py`](.ld/self-hosted/storage-maintenance.py) | 仅调用现有 `assets-grace-hard-delete` 接口并输出磁盘告警状态，不发明按文件年龄或“业务价值”删除的策略。需另行安装 systemd 单元及 root-only 凭据，不随 Git 更新自动部署。 |
 
 构建工作流还包含容易遗漏的部署适配：Node 22、锁定 pnpm 9.15.0、冻结依赖安装、单并发构建，以及仅在临时 runner 内修改 `next.config.ts` 的内存／worker 参数。这不是仓库中持久的 `next.config.ts` 改动；上游配置结构变化时工作流会主动失败，必须重新审查，不能删除断言硬套。`NEXT_PUBLIC_*` 当前带有 LD 的构建地址，复制部署前需要核对；有些地址在构建时固化，改运行时 env 不一定足够。构建附件只保留 1 天，**不是长期回滚备份**。继承的其他上游 CI 未整体重写，启用前须检查触发分支、云目标、发布权限和 secrets。
 
@@ -39,27 +40,33 @@
 | 项目 | 现网位置／行为 | 与升级的关系 |
 | --- | --- | --- |
 | 独立部署与持久数据 | `/srv/sprintable/compose.json`、`config/web.env`、`secrets/app.env`、`data/`、`runtime/web/` | PostgreSQL、Backend、MCP、入口容器与原生 Node 前端独立管理；限制资源、端口绑定回环。业务数据、附件与 secrets 不放 Git。 |
-| 前端服务隔离 | `/etc/systemd/system/ld-sprintable-web.service` | 专用用户、资源与写权限限制。新增附件目录必须精确赋权，不能为解决上传而取消整个服务隔离。 |
+| 前端服务隔离及附件共享 | `/etc/systemd/system/ld-sprintable-web.service`、其 `30-local-storage.conf` drop-in、`/srv/sprintable/data/blobs` | 专用共享组 `ld-sprintable-storage`，仅附件根目录采用 setgid＋组读写；网页与后端 `umask 0007`，后端容器仅追加该组。网页只增加这个可写目录，不取消整体隔离，不让网页加入 Hermes 的用户组。 |
 | 网页入口 | `/srv/sprintable/` 下的独立入口配置；`ld-sprintable-cert-renew.timer`、`ld-sprintable-hk-relay.service` | 上海 IP HTTPS 入口已启用；香港新转发已准备，但本次核对时公开域名仍指向旧美机入口，不能写成已完成域名切换。仅维护本服务入口，不覆盖其他站点、代理或隧道。 |
 | 账号与空间 | Sprintable 自己的 PostgreSQL | 新空间账号、项目、成员身份及密码设置属于实例数据，不是源码默认账号。已限制公开注册；不把可登录密码放进 README、种子数据或构建产物。 |
+| 主人邮件状态一次性确认 | 原生 `auth.verify_email` 处理器＋现有主人记录 | 新空间初始 `email_verified=false`，且未配置 SMTP／Resend；按主人明确授权仅确认此账号。不是邮件真实投递证明，不放开其他用户、不改全局校验策略或密码；激活清单已实际返回 5/5。 |
 | Hermes 生效配置 | `/etc/hermes-trusted/runtime.json`、`/etc/hermes-trusted/current/config.yaml`、`/etc/hermes-trusted/current/runtime.env` | `current` 指向受保护快照，Gateway 使用受控挂载。宿主可编辑 home 下的同名文件未必是生效来源；不得绕过保护直接改只读快照。 |
 | 原生工具／消息接线 | 上述 Hermes config / env | SSE 插件 API 为 `http://127.0.0.1:32800`；MCP 为 `http://127.0.0.1:32808/mcp`，连接／调用超时均为 60 秒。插件收消息，MCP 提供工具，两者不可互相替代；当前只放行 29 个 MCP 工具，不是服务器列出的全部工具。 |
 | 凭据作用域及 ACK 兼容 | `/opt/hermes-trusted/empty-plugins/sprintable-platform/__init__.py` | 外层包装使用 Hermes 的凭据作用域，并在 ACK 请求成功后才推进确认游标；依赖探测不越作用域读取密钥。调用了 `_profile_runtime_scope` 等内部接口，**属于自维护兼容补丁，不是官方稳定 API 保证**。 |
 | 消息级去重与命令保护 | 同目录的 `delivery_guard.py`，配合原生 `adapter.py` | 以会话 ID＋原消息 ID 合并 `conversation.message_created` / `conversation:mention` 的重复触发，保留原生事件类型；保护 `/stop` 等 slash 命令不被结构化前缀变成普通模型请求。去重复用内存缓存，不承诺跨进程永久“恰好一次”。 |
 | 旁听／激活信息 | 生效 `runtime.env` | `SPRINTABLE_NONINVOKE_OBSERVATIONS=1`、`SPRINTABLE_ACTIVATION_HEADER=1`。只处理服务端已投递的事件；不能让被 `mentions` 过滤掉的气泡凭空进入上下文。 |
 | 备份、验收与回退 | `/srv/sprintable/scripts/`、`/srv/sprintable/backups/`、`/srv/sprintable/SHANGHAI-DEPLOYMENT-HANDOFF.txt` | 保留一致性备份、校验和、恢复验证及接入切换记录。Gateway 接线回退只恢复接线配置，不回写 Bot 记忆或覆盖 Sprintable 新数据。 |
+| 原生存储回收调度 | `ld-sprintable-storage-maintenance.service` / `.timer`；`/srv/sprintable/scripts/storage-maintenance.py`；`/srv/sprintable/secrets/storage-maintenance.env` | 每天 Asia/Shanghai 04:30＋最多 5 分钟随机延迟，补跑错过的调度；只请求回环 Backend 的原生鉴权回收接口。脚本源码已入库，systemd 单元和密钥仅部署侧保存；磁盘告警只写 journal，不宣称会自动发邮件／QQ。 |
 | 现有 Agent 技能 | Hermes home 的 `skills/devops/sprintable-stream-triage/`、`skills/qqbot-platform/im-channel-onboarding/` | 服务器侧已有排障／接入技能，不随本仓库分发，也不等于完整会议使用技能；已发现的说明缺口见下一节。 |
 
 “外层补丁”仅表示没有直接修改 Hermes 核心文件，**不等于不受上游更新影响**：插件内部接口、事件结构、MCP 工具名、配置 schema 和挂载方式变化都可能破坏兼容性。上海完成的接线验收也不证明美机当前在线或已同步同样状态。
 
 ### 当前已知缺口与待定默认（不要误报完成）
 
-1. **附件：待补齐部署配置。** 现网网页生产进程未设置 `STORAGE_PROVIDER`，原生因此选 `local`；缺少 `STORAGE_LOCAL_SIGNING_SECRET`，上传会被生产安全校验拒绝。`STORAGE_LOCAL_ROOT` 与前端可写持久目录也未完整配置；后端已有 `blobs` / `channel-files` 挂载不代表前端附件存储已打通。日志中的 “GCS upload failed” 标签不代表实际使用 GCS。修复须配齐前后端共享内容、签名、访问 URL、挂载与权限，不能关掉生产签名校验或使用公开开发密钥。
+1. **聊天附件：本地磁盘已修复。** 根因是网页端缺少生产签名密钥与可写持久目录，而后端已有自己的 local 配置。现已令网页 `STORAGE_LOCAL_ROOT=/srv/sprintable/data/blobs` 对应后端 `/data/blobs`，共用已有的非默认签名密钥；后端签名链接改指当前上海 HTTPS 入口，不再指向旧美机域名。用 68 字节测试 PNG 验证真实 HTTPS 上传、消息资产登记、授权下载字节一致、Agent 身份读取该未 @ 消息、原生图片上下文签名及下载；未调用视觉／聊天模型。未授权签名和伪造签名访问均被拒绝。测试消息已按原生接口删除，测试资产已软删除等待宽限期，不删除任何已有用户附件。仅重载 Sprintable Backend 与 Web，Hermes Gateway PID 未变。
 2. **网盘不是对象存储。** [原生存储工厂](apps/web/src/lib/storage/factory.ts) 支持 `local`、`gcs`、`s3` / `minio`；Google Drive 不是 `gcs`，当前无直接 Drive provider。Drive 备份／同步或专门适配器需要另行实施，不应宣称填一个网盘链接即可启用。
 3. **当前会议仅 @ 投递。** 原生 `notification_preferences` 存在全局、项目或会话作用域；本次检查的女仆长全局是 `sse/all`，会议覆盖为 `sse/mentions`，该会话 `free_response=false`。实际按更具体的会话设置执行，普通消息保存在数据库但不会自动成为模型上下文。原生 `all` / `mentions` / `mute` 是投递级别，不是完整的模型发言策略；`free_response=true` 可以放宽 `mentions`，不能解除显式 `mute`。
 4. **可读历史不等于自动补齐。** 原生 `sprintable_list_chat_messages` / `sprintable_get_chat_message` 已可用，能按权限读到未 @ 的历史。旁听缓存只适用于已经投递、且明确指定其他收件人的事件；当前原生缓存最多 20 条、每条 500 字，属于内存缓存。没有 `audience` 的广播消息默认算对本 Agent 发言，不能只打开旁听开关就声称实现“所有消息都看、只有 @ 才回复”。
-5. **待主人选择 LD 会议默认。** 候选为原生全量投递、原生仅 @、仅 @ 触发并由接入层自动带入有界近期上下文、静音。推荐的“@＋自动上下文”尚未实现，不是现成原生开关；目前未改 Fork 默认，也未批量迁移既有会话。以后更改新建默认时要另行说明如何处理数据库中已有覆盖项。
+5. **主人当前选择 B：原生仅 @。** 保留现有会议 `mentions`、`free_response=false`，没有实现 C 的自动拉取／拼接上下文，也没有重写上游全局默认或批量迁移其他会话。前端可随时调整：会话右上角齿轮编辑自己的通知规则；管理员从组织成员的详情页「通知规则摘要 → 编辑」代改指定 Bot 的会话规则，已验证主人可经网页 BFF 读取女仆长实际覆盖项。不要把人类界面的铃铛静音当作 Bot 投递设置。`all` 后由模型选择沉默是另一层行为，仍可能逐条调用模型付费；它不保证无限上下文或永久记忆。当前没有切到 `all` 或更改人设。
 6. **技能说明待校正／补充。** 现有技能偏排障，缺少“被 @ 后读同会话近期历史、读取附件、记录决策与任务交接”的可靠日常流程；其中“不用 @ 一定送达”的说明漏看服务端通知偏好，“90 秒超时一定是后端卡死”的推断也缺少对端地址与维护时间线验证。它们不是官方保证。后续应补足工具发现、权限与上下文预算说明；不能把集成缺口简单归责于 Agent，也不能用技能提示代替需要确定性实现的接入逻辑。
+7. **原生回收不是“所有文件自动过期”。** [`cron.py`](backend/app/routers/cron.py) 的 `assets-grace-hard-delete` 仅回收已经标记 `deleted_at` 且超过 7 天的资产，每次最多 500 个，blob 删除成功后才删除记录；已接本地定时调用。有效聊天／文档／任务引用不会仅因久远而过期，5 分钟／30 分钟签名 URL 的 TTL 也不是文件删除时间。上传后取消发送、尚未登记进资产表的文件不在此原生任务覆盖范围；未增加自定义孤立文件扫描或内容价值分类。`storage-usage-warn` 依赖订阅容量和邮件通道，不能当作自建磁盘的可靠配额／告警；本地脚本只记录磁盘空间。当前系统盘约 85% 已用，主要不是本次附件，未擅自清理其他目录。
+8. **局部存储能力边界。** 当前验收的是会话的服务端 multipart 上传；原生 Local provider 的 `signed_write_url(create_only=True)` 尚未实现，对应「存储」页面的直传、部分头像等签名 PUT 流程不能据此宣称可用。切勿关闭 create-only 安全校验伪装成功。本次不为这些独立流程扩展大段业务代码。
+
+本次修复的服务器记录位于 `/srv/sprintable/backups/storage-repair-20261010T123707Z/`，包含配置副本、`APPLIED.json`、`OWNER-CONFIRMATION.json`、`ACCEPTANCE.json`；修复前还完成了新的数据库真实恢复校验。一次性运维脚本为 `scripts/repair-storage.py`、`scripts/verify-owner.py`、`scripts/accept-storage.py`（均在服务器部署根目录下，不随仓库分发）。配置回退入口为 `python3 /srv/sprintable/scripts/repair-storage.py --rollback /srv/sprintable/backups/storage-repair-20261010T123707Z`，执行前仍需审查当前服务状态与后续改动；它不回写数据库或移除新附件，也不自动撤销已授权的账号确认。共享组与目录权限保留以避免破坏后来上传的数据，完全移除须另行审查。
 
 原生依据：[Hermes 连接器](connectors/hermes-sprintable/README.md)、[通知路由](backend/app/services/channel_router.py)、[聊天 MCP 工具](backend/sprintable_mcp/tools/chat.py)、[存储配置](apps/web/src/lib/storage/config.ts)。多种事件表示同一消息是原生设计；本地去重针对重复模型执行，不是删除原生业务事件。
 
@@ -82,7 +89,7 @@ pnpm --filter web type-check
 pnpm --filter web build
 ```
 
-这是一份可审计的维护约定，不是自动防覆盖机制。当前没有新增“README 完整性”CI 门禁；上游升级是否安全仍须以逐项检查与实际验收为准。本次仅补充说明，不改变生产服务或待选默认行为。
+这是一份可审计的维护约定，不是自动防覆盖机制。当前没有新增“README 完整性”CI 门禁；上游升级是否安全仍须以逐项检查与实际验收为准。应用源码仍保持原有汉化差异，本次存储修复使用原生能力＋外部配置／调度，未修改 Hermes 核心、记忆或模型。
 
 ---
 
