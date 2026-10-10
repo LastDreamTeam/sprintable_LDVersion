@@ -1,0 +1,91 @@
+name: LD manual runtime bundle
+
+# Packaging only. No server credentials, deploy step, or automatic push trigger.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ld-runtime-bundle
+  cancel-in-progress: false
+
+jobs:
+  web:
+    if: github.repository == 'LastDreamTeam/sprintable_LDVersion' && github.ref_name == 'main_1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      NEXT_PUBLIC_APP_URL: https://cmd.vsingers.com
+      NEXT_PUBLIC_FASTAPI_URL: http://127.0.0.1:32800
+      NEXT_TELEMETRY_DISABLED: '1'
+      TURBO_TELEMETRY_DISABLED: '1'
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate Chinese catalog and locale negotiation
+        run: |
+          node scripts/check-zh-locale.cjs
+          cd apps/web
+          pnpm exec vitest run src/i18n/locale-negotiation.test.ts src/i18n/locale-negotiation.guard.test.ts src/i18n/locale-zh.test.ts src/lib/i18n.test.ts
+      - name: Build in isolated hosted runner
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'apps/web/next.config.ts';
+          const text = fs.readFileSync(file, 'utf8');
+          const marker = 'const nextConfig: NextConfig = {';
+          if (text.split(marker).length !== 2 || text.includes('experimental:')) throw new Error('Review upstream build config');
+          fs.writeFileSync(file, text.replace(marker, marker + '\n  experimental: { webpackMemoryOptimizations: true, webpackBuildWorker: true, cpus: 1 },'));
+          NODE
+          pnpm exec turbo run build --concurrency=1
+          cp -a apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+          cp -a apps/web/public apps/web/.next/standalone/apps/web/public
+          mkdir bundle
+          tar -C apps/web/.next/standalone -czf bundle/web-standalone.tar.gz .
+          git rev-parse HEAD > bundle/SOURCE_COMMIT
+          sha256sum apps/web/messages/zh.json > bundle/catalog.sha256
+          cd bundle
+          sha256sum web-standalone.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ld-web-runtime
+          path: bundle/
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+  services:
+    if: github.repository == 'LastDreamTeam/sprintable_LDVersion' && github.ref_name == 'main_1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated backend and fetch runtime images
+        run: |
+          docker build -t ld-sprintable-backend:$(git rev-parse --short=12 HEAD) -f backend/Dockerfile backend
+          docker pull pgvector/pgvector:pg17-bookworm
+          docker pull nginx:1.28-alpine
+          docker pull certbot/certbot:v5.4.0
+          mkdir bundle
+          docker image inspect ld-sprintable-backend:$(git rev-parse --short=12 HEAD) pgvector/pgvector:pg17-bookworm nginx:1.28-alpine certbot/certbot:v5.4.0 --format '{{json .RepoTags}} {{.Id}} {{json .RepoDigests}}' > bundle/images.txt
+          docker save ld-sprintable-backend:$(git rev-parse --short=12 HEAD) pgvector/pgvector:pg17-bookworm nginx:1.28-alpine certbot/certbot:v5.4.0 | gzip -1 > bundle/services-images.tar.gz
+          git rev-parse HEAD > bundle/SOURCE_COMMIT
+          cd bundle
+          sha256sum services-images.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ld-service-runtime
+          path: bundle/
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
