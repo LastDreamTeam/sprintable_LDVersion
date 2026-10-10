@@ -2,6 +2,7 @@
 
 import { useRef, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { Hash } from 'lucide-react';
+import { useLocale } from 'next-intl';
 import { ENTITY_ICONS } from '@/components/chat/embed-card';
 import { entityTypeLabel, getEntityQuery, type EntityResult } from '@/components/chat/chat-input-entity-tokens';
 import { translateEntityStatus } from '@/components/chat/entity-status-labels';
@@ -36,6 +37,7 @@ interface EntityAwareTextareaProps {
  * JSX를 그대로 재사용). story description/AC(story-detail-panel.tsx)가 첫 소비자.
  */
 export function EntityAwareTextarea({ value, onChange, projectId, placeholder, className, autoFocus, onPaste, getEntityTypeLabel, 'data-testid': dataTestId, entityCandidatesLabel = 'Entity candidates' }: EntityAwareTextareaProps) {
+  const locale = useLocale();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const entityPicker = useEntityPicker(projectId);
 
@@ -98,7 +100,7 @@ export function EntityAwareTextarea({ value, onChange, projectId, placeholder, c
             const isNewGroup = idx === 0 || entityPicker.entityResults[idx - 1]!.entity_type !== entity.entity_type;
             // story #2522 — 원시값(in-review 등) 노출 금지, EmbedCard와 같은 클래스의 같은
             // fix(# 피커도 같은 처방이 통한다·close-the-class).
-            const statusLabel = entity.status ? translateEntityStatus(entity.entity_type, entity.status) : null;
+            const statusLabel = entity.status ? translateEntityStatus(entity.entity_type, entity.status, locale) : null;
             return (
               <li key={`${entity.entity_type}:${entity.entity_id}`}>
                 {isNewGroup && (

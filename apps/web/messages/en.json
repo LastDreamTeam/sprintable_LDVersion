@@ -1652,6 +1652,14 @@
     "verifyExamplePrompt": "Show me my story list"
   },
   "settings": {
+    "ldAccessRevokeTitle": "Revoke project access?",
+    "ldAgentAccessRevokeBody": "Revoke access for “{name}” to “{project}”? This removes its project runtime association, stops its work in this project, and may remove it from the project roster; older chats may show “Unknown member”. This does not change its role or mute it. Existing chats, tasks, and the organization's agent identity are not deleted; other projects and the Hermes process are not stopped. Grant access again to reconnect it.",
+    "ldHumanAccessRevokeBody": "Revoke direct access for “{name}” to “{project}”? Without other authorization, this member can no longer access this project. This does not change their role or delete chats and tasks. Existing organization-admin and other permissions still follow the original rules.",
+    "ldAccessRevokeConfirm": "Confirm revoke access",
+    "ldAccessGrantAction": "Grant project access",
+    "ldAccessCurrentProject": "current project",
+    "ldAccessRevoked": "Project access grant revoked: {target}.",
+    "ldAccessGranted": "Project access granted: {target}.",
     "title": "Settings",
     "save": "Save",
     "twoFactorTitle": "Two-Factor Authentication",

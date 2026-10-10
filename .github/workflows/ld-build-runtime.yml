@@ -52,6 +52,7 @@ jobs:
           node scripts/check-zh-locale.cjs
           cd apps/web
           pnpm exec vitest run src/i18n/locale-negotiation.test.ts src/i18n/locale-negotiation.guard.test.ts src/i18n/locale-zh.test.ts src/lib/i18n.test.ts src/lib/storage/ld-image-config.test.ts
+          pnpm exec vitest run src/components/chat/entity-status-labels.test.ts src/components/chat/ld-entity-status-locale.test.ts src/components/chat/embed-card.link-states.test.tsx src/components/settings/ld-access-revoke.test.tsx
       - name: Build in isolated hosted runner
         run: |
           node <<'NODE'

@@ -63,8 +63,8 @@ function historyClaim(
   const oldStatus = item.context?.old_status;
   const newStatus = item.context?.new_status;
   if (oldStatus && newStatus) {
-    const oldLabel = translateEntityStatus(workItemType, oldStatus) ?? oldStatus;
-    const newLabel = translateEntityStatus(workItemType, newStatus) ?? newStatus;
+    const oldLabel = translateEntityStatus(workItemType, oldStatus, locale) ?? oldStatus;
+    const newLabel = translateEntityStatus(workItemType, newStatus, locale) ?? newStatus;
     const newDisplay = locale === 'ko' ? `${newLabel}${pickEuroJosa(newLabel)}` : newLabel;
     return t('historyStatusChanged', { old: oldLabel, new: newDisplay });
   }

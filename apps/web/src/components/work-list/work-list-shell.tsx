@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ListFilter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -71,7 +71,7 @@ function FilterDropdown({
 
 // story #3976(PO 확定) — 스토리 카드 배지 색. Story.status는 work-list-row.tsx의
 // STATE_TEXT(일/실행 파생 실행상태)와 다른 축이라 그 맵을 재사용하지 않고 별도로 둔다
-// (섞지 않는다). 낱말 자체는 entity-status-labels.ts::translateEntityStatus('story',…)
+// (섞지 않는다). 낱말 자체는 entity-status-labels.ts::translateEntityStatus('story',…, locale)
 // (SSOT, 새 번역 0) — 여기선 색 클래스만. 색 규칙은 STATE_TEXT와 동형(대기류=muted·
 // 검토=warning-strong·완료=success).
 const STORY_STATUS_CLASS: Record<string, string> = {
@@ -115,6 +115,7 @@ function useWorkListFilters(): [WorkListFilters, (next: Partial<WorkListFilters>
 }
 
 export function WorkListShell({ projectId }: { projectId: string }) {
+  const locale = useLocale();
   const t = useTranslations('workList');
   const [fetched, setFetched] = useState<FetchedWorkList | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -306,7 +307,7 @@ export function WorkListShell({ projectId }: { projectId: string }) {
                         // work-list-row.tsx의 STATE_TEXT(일/실행 파생 실행상태)와 별개라 섞지
                         // 않는다 — 시안 06d2d61c가 "완료/검토 中/진행 中/대기" 배지를 스토리
                         // 줄에 그린 것은 이 축을 가리킨다(그라운딩 3975 부재⑤ 판정).
-                        const storyStatusLabel = translateEntityStatus('story', story.status);
+                        const storyStatusLabel = translateEntityStatus('story', story.status, locale);
                         const storyStatusClass = STORY_STATUS_CLASS[story.status] ?? 'text-muted-foreground';
                         return (
                         <div key={story.storyId} className="border-l-2 border-border pl-3">

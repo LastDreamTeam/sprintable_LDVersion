@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { fetchWithAuth } from '@/lib/db/client';
 import { isSystemPublisher } from '@/lib/runtime-capabilities';
 import { memberRowLabels } from '@/lib/member-display';
+import { ProjectAccessRevokeDialog, type AccessRevokeTarget } from '@/components/settings/project-access-revoke-dialog';
 
 interface OrgAgent {
   id: string;
@@ -71,6 +72,7 @@ export function AccessMatrixTab() {
   const [loadError, setLoadError] = useState(false);
   const [togglingKey, setTogglingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<AccessMatrixMessageState>(null);
+  const [revokeTarget, setRevokeTarget] = useState<(AccessRevokeTarget & { agentId: string; projectOption: ProjectOption }) | null>(null);
 
   const key = (agentId: string, projectId: string) => `${agentId}::${projectId}`;
 
@@ -109,9 +111,16 @@ export function AccessMatrixTab() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const handleToggle = async (agentId: string, project: ProjectOption) => {
+  const handleToggle = async (agentId: string, project: ProjectOption, confirmedRecordId?: string) => {
     const k = key(agentId, project.id);
     if (togglingKey) return;
+    const currentRecordId = grantMap[k];
+    if (confirmedRecordId && currentRecordId !== confirmedRecordId) return;
+    if (currentRecordId && !confirmedRecordId) {
+      setRevokeTarget({ recordId: currentRecordId, agentId, projectOption: project,
+        name: agents.find((a) => a.id === agentId)?.name ?? agentId, project: project.name, agent: true });
+      return;
+    }
     setTogglingKey(k);
     setMessage(null);
     const recordId = grantMap[k];
@@ -243,6 +252,7 @@ export function AccessMatrixTab() {
                                   : 'border-border text-muted-foreground hover:bg-muted/40',
                               )}
                               aria-label={granted ? ta('matrixCellGranted') : ta('matrixCellBlocked')}
+                              title={t(granted ? 'ldAccessRevokeConfirm' : 'ldAccessGrantAction')}
                             >
                               {toggling ? (
                                 <Loader2 className="size-3.5 animate-spin" />
@@ -275,6 +285,12 @@ export function AccessMatrixTab() {
           </div>
         </SectionCardBody>
       </SectionCard>
+      <ProjectAccessRevokeDialog target={revokeTarget} onCancel={() => setRevokeTarget(null)}
+        onConfirm={() => {
+          const target = revokeTarget;
+          setRevokeTarget(null);
+          if (target) void handleToggle(target.agentId, target.projectOption, target.recordId);
+        }} />
     </div>
   );
 }

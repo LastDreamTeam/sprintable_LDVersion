@@ -856,7 +856,7 @@ export function ChatInput({ onSend, onUploadFile, disabled, placeholder, project
               const isNewGroup = idx === 0 || entityPicker.entityResults[idx - 1]!.entity_type !== entity.entity_type;
               // story #2522 — 원시값(in-review 등) 노출 금지, EmbedCard와 같은 클래스의 같은
               // fix(# 피커도 같은 처방이 통한다·close-the-class).
-              const statusLabel = entity.status ? translateEntityStatus(entity.entity_type, entity.status) : null;
+              const statusLabel = entity.status ? translateEntityStatus(entity.entity_type, entity.status, locale) : null;
               return (
               <li key={`${entity.entity_type}:${entity.entity_id}`}>
                 {isNewGroup && (

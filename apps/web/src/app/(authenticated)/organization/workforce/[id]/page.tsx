@@ -772,6 +772,7 @@ export default function AgentDetailPage() {
           _require_owner_or_admin 정합·403 surprise 0; 단일 project owner-non-admin 은 안전하게 미노출). */}
       <AgentProjectAccessSection
         agentMemberId={id}
+        agentName={agent.name}
         projects={projects}
         canEdit={(orgRole === 'admin' || orgRole === 'owner') && !isSystemPublisherAgent}
       />

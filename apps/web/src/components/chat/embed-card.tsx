@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
@@ -210,10 +210,10 @@ export const MdBody = ({ content }: { content: string }) => {
 // story #2780 — 컴포넌트가 아니라 순수 함수로 둔다: 호출부(embed-card 모달 body)가 반환값이
 // null인지(=보여줄 내용 없음) 직접 검사해야 하는데, JSX `<EntityDetail/>` 호출은 그 반환값을
 // 렌더 트리 밖에서 들여다볼 수 없다(엘리먼트 서술자는 항상 non-null이다 — 안이 null이어도).
-function renderEntityDetail(entityType: string, entityId: string, detail: Record<string, unknown>, tc: (key: string) => string, t: (key: string) => string, withProject: (href: string) => string): React.ReactNode | null {
+function renderEntityDetail(entityType: string, entityId: string, detail: Record<string, unknown>, tc: (key: string) => string, t: (key: string) => string, withProject: (href: string) => string, locale: string): React.ReactNode | null {
   if (entityType === 'story') {
     const d = detail as { status?: string; priority?: string; story_points?: number; description?: string; acceptance_criteria?: string };
-    const statusLabel = d.status ? translateEntityStatus('story', d.status) : null;
+    const statusLabel = d.status ? translateEntityStatus('story', d.status, locale) : null;
     return (
       <div className="space-y-3">
         <div className="flex flex-wrap gap-1.5">
@@ -234,7 +234,7 @@ function renderEntityDetail(entityType: string, entityId: string, detail: Record
 
   if (entityType === 'epic') {
     const d = detail as { status?: string; priority?: string; objective?: string; description?: string; target_date?: string; story_points_target?: number };
-    const statusLabel = d.status ? translateEntityStatus('epic', d.status) : null;
+    const statusLabel = d.status ? translateEntityStatus('epic', d.status, locale) : null;
     return (
       <div className="space-y-3">
         <div className="flex flex-wrap gap-1.5">
@@ -295,7 +295,7 @@ function renderEntityDetail(entityType: string, entityId: string, detail: Record
   // 있다 — "풋터에 갈 곳이 없다"와 "몸통에 보여줄 게 없다"는 별개였다는 게 이 스토리의 발견.
   if (entityType === 'hypothesis') {
     const d = detail as { status?: string; statement?: string };
-    const statusLabel = d.status ? translateEntityStatus('hypothesis', d.status) : null;
+    const statusLabel = d.status ? translateEntityStatus('hypothesis', d.status, locale) : null;
     if (!statusLabel && !d.statement) return null;
     return (
       <div className="space-y-3">
@@ -317,7 +317,7 @@ function renderEntityDetail(entityType: string, entityId: string, detail: Record
   if (entityType === 'task') {
     const d = detail as { title?: string; status?: string; story_id?: string; project_id?: string | null };
     if (!d.title) return null;
-    const statusLabel = d.status ? translateEntityStatus('task', d.status) : null;
+    const statusLabel = d.status ? translateEntityStatus('task', d.status, locale) : null;
     // story #4253(까디르 codex · PO 09:45Z) — 채팅은 조직 전체가 보는 자리라 «항목 자기 프로젝트»: TaskResponse.project_id(story_id →
     // Story.project_id 1-hop)로 싣고, 모를 때만 현재 p.
     const parentProject = d.project_id ? (h: string) => withProjectParam(h, d.project_id ?? null) : withProject;
@@ -342,7 +342,7 @@ function renderEntityDetail(entityType: string, entityId: string, detail: Record
   if (entityType === 'sprint') {
     const d = detail as { title?: string; status?: string; start_date?: string; end_date?: string };
     if (!d.title) return null;
-    const statusLabel = d.status ? translateEntityStatus('sprint', d.status) : null;
+    const statusLabel = d.status ? translateEntityStatus('sprint', d.status, locale) : null;
     const period = d.start_date && d.end_date ? `${d.start_date} ~ ${d.end_date}` : null;
     if (!statusLabel && !period) return null;
     return (
@@ -434,6 +434,7 @@ export function EntityPreviewModal({
   // 유일한 소비 지점.
   // story #3776(1층B) — "닫기" aria-label, common ns의 기존 close 키 재사용.
   const tc = useTranslations('common');
+  const locale = useLocale();
   const t = useTranslations('chats');
   // story #3888 — renderGateSummary의 risk 배지 라벨(workList.riskBadgeHigh/riskBadgeUnknown).
   const tWorkList = useTranslations('workList');
@@ -587,7 +588,7 @@ export function EntityPreviewModal({
   // story #2522 — 원시값(raw status enum, 예: "in-review")을 그대로 뱃지에 노출하던 기존
   // gap(#2903 design review 발견). translateEntityStatus로 반드시 통과시킨다 — 맵에 없으면
   // (미매핑 status) null이 나와 뱃지 자체를 안 그린다(원시값 폴백 절대 금지, 빈칸이 정답).
-  const resolvedStatusLabel = resolvedStatus ? translateEntityStatus(entityType, resolvedStatus) : null;
+  const resolvedStatusLabel = resolvedStatus ? translateEntityStatus(entityType, resolvedStatus, locale) : null;
 
   // story #2302 AC3 — ①own-href(정적) / ②via-parent(레코드 fetch 필요) / ③없음, 세 갈래를
   // "카드 전체를 죽이지 않는다"(AC4) 원칙대로 여기서만 계산 — 헤더의 아이콘·제목·상태는 이 값과
@@ -741,7 +742,7 @@ export function EntityPreviewModal({
   // 덜 정직한 새 위반형). "RICH 타입인가"가 아니라 "실제로 보여줄 내용이 있는가"로 이
   // 문구를 하나로 통일한다 — 한 번만 계산해 조건과 렌더 양쪽에 쓴다(이중 호출 금지).
   // 대상-프로젝트: 본문 · 상세 안 중첩 엔티티 토큰은 type · id뿐이라 대상 프로젝트를 모른다(칩을 열면 미리보기가 자기 프로젝트로 해소).
-  const richContent = detail && RICH_PREVIEW_TYPES.has(entityType) ? renderEntityDetail(entityType, entityId, detail, tc, t, flatHref) : null;
+  const richContent = detail && RICH_PREVIEW_TYPES.has(entityType) ? renderEntityDetail(entityType, entityId, detail, tc, t, flatHref, locale) : null;
   // gate는 RICH_PREVIEW_TYPES 밖(parity 계약) — richContent와 별개 축으로 계산해 병합.
   const gateSummary = detail && entityType === 'gate' ? renderGateSummary(detail, tWorkList, tDashboard, tCage) : null;
 
@@ -817,6 +818,7 @@ export function EmbedCard({
   onOpenReadingPanel?: (entityType: string, entityId: string, title: string | null, status: string | null, href: string | null) => void;
 }) {
   const flatHref = useFlatHref(); // story #4231 3차 — flat 목적지는 현재 프로젝트(`?p=`)를 싣는다
+  const locale = useLocale();
   const t = useTranslations('chats');
   const [showModal, setShowModal] = useState(false);
   const [navigating, setNavigating] = useState(false);
@@ -827,7 +829,7 @@ export function EmbedCard({
   const label = title ?? entity_id;
   // story #2522 — EmbedCard 자신의 인라인 카드(모달과 별개 렌더 경로)도 원시값을 그대로
   // 노출하던 같은 클래스의 gap. translateEntityStatus로 통과시킨다(미매핑=null=뱃지 안 그림).
-  const statusLabel = status ? translateEntityStatus(entity_type, status) : null;
+  const statusLabel = status ? translateEntityStatus(entity_type, status, locale) : null;
 
   // story #2905(S2c①) — artifact/mockup은 "실 렌더 인라인"(§3 표): 텍스트 칩이 아니라 목업
   // 자체를 축소 프리뷰로 보여준다. version_number를 몰라 ArtifactThumbnail을 못 그렸던 갭 —
@@ -1066,6 +1068,7 @@ export function EntityChip({
 } & VariantProps<typeof entityChipLabelVariants>) {
   const flatHref = useFlatHref(); // story #4231 — flat 링크 `?p=`
   // story #3776(1층A) — "결재함에서 보기" 딥링크 CTA, content ns의 기존 submitGateLink 키 재사용.
+  const locale = useLocale();
   const tContent = useTranslations('content');
   // story #3776(1층B, 페드루 재검토 10:07Z·10:14Z) — "근거"는 chats ns의 기존
   // reportEvidenceLabel 키, "멘션"/"임베드"는 신설 embedFormMention/embedFormEmbed 키(닫힌
@@ -1120,7 +1123,7 @@ export function EntityChip({
     return () => { cancelled = true; };
   }, [entityType, entityId, effectiveDocStatus, projectMemberships]);
 
-  const statusLabel = ghost ? null : renderEntityStatusLabel(entityType, entityStatus ?? { kind: 'loading' });
+  const statusLabel = ghost ? null : renderEntityStatusLabel(entityType, entityStatus ?? { kind: 'loading' }, locale);
   // story #2886(S2b) — inline-meta는 기존 그대로 항상 펼침. inline(기본)은 인라인 메타를
   // 감추고(격납) hover/focus tooltip으로만 낸다 — 산문 속 반복 전개 제거가 이 스토리의 요지.
   const showInlineMeta = variant === 'inline-meta';

@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 
 import { fetchWithAuth } from '@/lib/db/client';
 import { orgRoleLabel } from '@/lib/org-member-role';
+import { ProjectAccessRevokeDialog, type AccessRevokeTarget } from './project-access-revoke-dialog';
 
 interface OrgMember {
   id: string;            // org_member.id
@@ -40,6 +41,7 @@ export function ProjectAccessSection({ projectId }: ProjectAccessSectionProps) {
   const [unauthorized, setUnauthorized] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<(AccessRevokeTarget & { member: OrgMember }) | null>(null);
 
   // story #3231 4라운드(카디르 QA) — 2라운드에서 이 화면을 org-admin 전용(currentRole
   // prop 기반)으로 잠갔는데, 실제 인가 경계는 org-admin이 아니라 "이 프로젝트의
@@ -80,8 +82,15 @@ export function ProjectAccessSection({ projectId }: ProjectAccessSectionProps) {
   const getGrant = (orgMemberId: string) =>
     grants.find((g) => g.org_member_id === orgMemberId);
 
-  const handleToggle = async (member: OrgMember) => {
+  const handleToggle = async (member: OrgMember, confirmedRecordId?: string) => {
     if (!canManage || togglingId) return;
+    const currentRecord = getGrant(member.id);
+    if (confirmedRecordId && currentRecord?.id !== confirmedRecordId) return;
+    if (currentRecord && !confirmedRecordId) {
+      setRevokeTarget({ recordId: currentRecord.id, member, name: member.name,
+        project: t('ldAccessCurrentProject'), agent: false });
+      return;
+    }
     setTogglingId(member.id);
     setMessage(null);
 
@@ -91,7 +100,7 @@ export function ProjectAccessSection({ projectId }: ProjectAccessSectionProps) {
         // 차단 — DELETE grant
         const res = await fetchWithAuth(`/api/projects/${projectId}/access/${existing.id}`, { method: 'DELETE' });
         if (res.ok) {
-          setMessage({ type: 'success', text: `${member.name} 접근 권한 해제됨` });
+          setMessage({ type: 'success', text: t('ldAccessRevoked', { target: member.name }) });
           await refreshData();
         } else {
           setMessage({ type: 'error', text: t('projectAccessRevokeFailed') });
@@ -104,7 +113,7 @@ export function ProjectAccessSection({ projectId }: ProjectAccessSectionProps) {
           body: JSON.stringify({ org_member_id: member.id, role: member.role }),
         });
         if (res.ok) {
-          setMessage({ type: 'success', text: `${member.name} 접근 권한 부여됨` });
+          setMessage({ type: 'success', text: t('ldAccessGranted', { target: member.name }) });
           await refreshData();
         } else {
           setMessage({ type: 'error', text: t('projectAccessGrantFailed') });
@@ -268,6 +277,12 @@ export function ProjectAccessSection({ projectId }: ProjectAccessSectionProps) {
           </div>
         )}
       </SectionCardBody>
+      <ProjectAccessRevokeDialog target={revokeTarget} onCancel={() => setRevokeTarget(null)}
+        onConfirm={() => {
+          const target = revokeTarget;
+          setRevokeTarget(null);
+          if (target) void handleToggle(target.member, target.recordId);
+        }} />
     </SectionCard>
   );
 }

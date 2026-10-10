@@ -63,9 +63,34 @@ export function entityStatusAvailability(entityType: string): 'has-status' | 'no
  * 경로는 없어도 어휘 맵은 있는 타입에 실제 rawStatus가 (미래에 다른 경로로) 들어오면 이
  * 함수는 정상 번역한다 — 「지금 채울 수 있나」는 칩 렌더 쪽(entityStatusAvailability) 책임,
  * 「번역할 수 있나」는 이 함수 책임으로 나눈다. */
-export function translateEntityStatus(entityType: string, rawStatus: string | null | undefined): string | null {
+const STATUS_LABELS_EN: typeof STATUS_LABELS = {
+  story: { backlog: 'Backlog', 'ready-for-dev': 'Ready to start', 'in-progress': 'In progress', 'in-review': 'In review', done: 'Done' },
+  task: { todo: 'To do', 'in-progress': 'In progress', done: 'Done' },
+  doc: { draft: 'Draft', pending: 'In review', confirmed: 'Confirmed', denied: 'Rejected' },
+  hypothesis: { proposed: 'Proposed', active: 'Validating', measuring: 'Measuring', verified: 'Verified', falsified: 'Falsified', archived: 'Archived' },
+  sprint: { planning: 'Planning', active: 'In progress', closed: 'Closed' },
+  epic: { active: 'In progress', done: 'Done', archived: 'Archived' },
+};
+const STATUS_LABELS_ZH: typeof STATUS_LABELS = {
+  story: { backlog: '待办', 'ready-for-dev': '待开始', 'in-progress': '进行中', 'in-review': '审核中', done: '已完成' },
+  task: { todo: '待办', 'in-progress': '进行中', done: '已完成' },
+  doc: { draft: '草稿', pending: '审核中', confirmed: '已确认', denied: '已退回' },
+  hypothesis: { proposed: '已提出', active: '验证中', measuring: '测量中', verified: '已证实', falsified: '已证伪', archived: '已归档' },
+  sprint: { planning: '规划中', active: '进行中', closed: '已结束' },
+  epic: { active: '进行中', done: '已完成', archived: '已归档' },
+};
+function statusLocale(locale: string) {
+  const primary = locale.toLowerCase().replace('_', '-').split('-')[0];
+  return primary === 'ko' || primary === 'zh' ? primary : 'en';
+}
+
+// Optional ko preserves the upstream helper contract. Every live UI caller passes
+// next-intl's selected locale; unsupported explicit locales fall back to English.
+export function translateEntityStatus(entityType: string, rawStatus: string | null | undefined, locale = 'ko'): string | null {
   if (!rawStatus) return null;
-  const map = STATUS_LABELS[entityType as StatusBearingEntityType];
+  const language = statusLocale(locale);
+  const labels = language === 'zh' ? STATUS_LABELS_ZH : language === 'ko' ? STATUS_LABELS : STATUS_LABELS_EN;
+  const map = labels[entityType as StatusBearingEntityType];
   if (!map) return null;
   return map[rawStatus] ?? null;
 }
@@ -104,10 +129,11 @@ export const ENTITY_STATUS_UNKNOWN_LABEL = '아직 모름';
  * 다르다, 매핑 자체가 없는 것은 새 status 추가를 놓친 FE 버그 신호이지 사용자에게 알릴
  * 정보가 아니다). state가 `undefined`(호출부가 기능 자체를 안 켬)면 이 함수를 안 부르는
  * 것이 호출부 관례 — 이 함수는 state가 실제로 있을 때만 호출된다는 전제다. */
-export function renderEntityStatusLabel(entityType: string, state: EntityStatusFetchState): string | null {
-  if (entityStatusAvailability(entityType) === 'no-status-concept') return ENTITY_STATUS_NO_CONCEPT_LABEL;
-  if (state.kind === 'loading' || state.kind === 'error') return ENTITY_STATUS_UNKNOWN_LABEL;
-  return translateEntityStatus(entityType, state.raw);
+export function renderEntityStatusLabel(entityType: string, state: EntityStatusFetchState, locale = 'ko'): string | null {
+  const language = statusLocale(locale);
+  if (entityStatusAvailability(entityType) === 'no-status-concept') return language === 'zh' ? '无状态' : language === 'en' ? 'No status' : ENTITY_STATUS_NO_CONCEPT_LABEL;
+  if (state.kind === 'loading' || state.kind === 'error') return language === 'zh' ? '状态未知' : language === 'en' ? 'Status unknown' : ENTITY_STATUS_UNKNOWN_LABEL;
+  return translateEntityStatus(entityType, state.raw, locale);
 }
 
 /** story #2262 PR② — chat-view.tsx의 배치조회가 타입별로 부를 `?ids=` 엔드포인트.

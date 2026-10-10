@@ -1652,6 +1652,14 @@
     "verifyExamplePrompt": "显示我的任务卡列表"
   },
   "settings": {
+    "ldAccessRevokeTitle": "撤销项目访问权限？",
+    "ldAgentAccessRevokeBody": "确认撤销“{name}”对“{project}”的访问权限？这会移除其项目运行关联，使其无法继续在此项目工作，并可能从项目成员名单中消失；旧聊天可能暂时显示“未知成员”。这不是修改角色或设置静音。已有聊天、任务和组织内的智能体身份不会被删除，其他项目及 Hermes 程序不会因此停止。可重新授予访问权限恢复接入。",
+    "ldHumanAccessRevokeBody": "确认撤销“{name}”对“{project}”的直接访问权限？如果没有其他授权，该成员将无法继续访问此项目。这不是修改角色。已有聊天和任务不会被删除；组织管理员等已有权限仍由原规则决定。",
+    "ldAccessRevokeConfirm": "确认撤销访问",
+    "ldAccessGrantAction": "授予项目访问",
+    "ldAccessCurrentProject": "当前项目",
+    "ldAccessRevoked": "已撤销 {target} 的项目访问授权。",
+    "ldAccessGranted": "已授予 {target} 项目访问权限。",
     "title": "设置",
     "save": "保存",
     "twoFactorTitle": "双因素身份验证",

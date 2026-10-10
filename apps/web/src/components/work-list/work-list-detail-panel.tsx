@@ -207,8 +207,8 @@ function historyClaim(item: ActivityLogItem, t: ReturnType<typeof useTranslation
   const oldStatus = item.context?.old_status;
   const newStatus = item.context?.new_status;
   if (oldStatus && newStatus) {
-    const oldLabel = translateEntityStatus('story', oldStatus) ?? oldStatus;
-    const newLabel = translateEntityStatus('story', newStatus) ?? newStatus;
+    const oldLabel = translateEntityStatus('story', oldStatus, locale) ?? oldStatus;
+    const newLabel = translateEntityStatus('story', newStatus, locale) ?? newStatus;
     // §⑤ 규율(story #3900) — 값 의존 조사("으로/로")는 템플릿에 못 박지 않는다(배치म
     // 의존적, verify-scoped-i18n-honorific-tone.test.ts가 이걸 잡는다) — 조사까지 미리
     // 합쳐 하나의 값으로 넘긴다(historyFieldChanged의 을/를과 동형 처리).
@@ -719,7 +719,7 @@ export function WorkListDetailPanel({
             ) : (
               <ul className="space-y-1.5" data-testid="panel-tasks-list">
                 {tasks.map((task) => {
-                  const label = translateEntityStatus('task', task.status);
+                  const label = translateEntityStatus('task', task.status, locale);
                   return (
                     <li key={task.id} className="flex items-center justify-between gap-2 text-xs">
                       <span className="truncate text-foreground">{task.title}</span>

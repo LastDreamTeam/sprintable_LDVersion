@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { SectionCard, SectionCardBody, SectionCardHeader } from '@/components/ui/section-card';
 import { cn } from '@/lib/utils';
 import { fetchWithAuth } from '@/lib/db/client';
+import { ProjectAccessRevokeDialog, type AccessRevokeTarget } from './project-access-revoke-dialog';
 
 /**
  * org-agent 멀티프로젝트 접근 관리 (story 088987d8).
@@ -33,12 +34,14 @@ interface AccessRecord {
 
 interface AgentProjectAccessSectionProps {
   agentMemberId: string;
+  agentName?: string;
   projects: ProjectOption[];
   canEdit: boolean;
 }
 
-export function AgentProjectAccessSection({ agentMemberId, projects, canEdit }: AgentProjectAccessSectionProps) {
+export function AgentProjectAccessSection({ agentMemberId, agentName, projects, canEdit }: AgentProjectAccessSectionProps) {
   const t = useTranslations('settings');
+  const [revokeTarget, setRevokeTarget] = useState<(AccessRevokeTarget & { projectId: string }) | null>(null);
   // project_id → grant record_id (granted 프로젝트만 키 보유).
   const [grantMap, setGrantMap] = useState<Record<string, string>>({});
   // GET access 가 403 인 프로젝트(read 권한 없음) — "grant 없음(차단)"과 구분(RC③). 잘못된 '차단' 표시 방지.
@@ -81,8 +84,15 @@ export function AgentProjectAccessSection({ agentMemberId, projects, canEdit }: 
 
   useEffect(() => { void loadGrants(); }, [loadGrants]);
 
-  const handleToggle = async (projectId: string) => {
+  const handleToggle = async (projectId: string, confirmedRecordId?: string) => {
     if (!canEdit || togglingId) return;
+    const currentRecordId = grantMap[projectId];
+    if (confirmedRecordId && currentRecordId !== confirmedRecordId) return;
+    if (currentRecordId && !confirmedRecordId) {
+      setRevokeTarget({ recordId: currentRecordId, projectId, name: agentName ?? agentMemberId,
+        project: projects.find((p) => p.id === projectId)?.name ?? projectId, agent: true });
+      return;
+    }
     setTogglingId(projectId);
     setMessage(null);
     const recordId = grantMap[projectId];
@@ -93,9 +103,9 @@ export function AgentProjectAccessSection({ agentMemberId, projects, canEdit }: 
         const res = await fetchWithAuth(`/api/projects/${projectId}/access/${recordId}`, { method: 'DELETE' });
         if (res.ok) {
           setGrantMap((m) => { const n = { ...m }; delete n[projectId]; return n; });
-          setMessage({ type: 'success', text: `${projectName} 접근을 차단했습니다.` });
+          setMessage({ type: 'success', text: t('ldAccessRevoked', { target: projectName }) });
         } else {
-          setMessage({ type: 'error', text: `${projectName} 차단에 실패했습니다.` });
+          setMessage({ type: 'error', text: t('projectAccessRevokeFailed') });
         }
       } else {
         // 허용 — POST grant (새 API 키 발급 없음).
@@ -115,9 +125,9 @@ export function AgentProjectAccessSection({ agentMemberId, projects, canEdit }: 
             }
           }
           if (recId) setGrantMap((m) => ({ ...m, [projectId]: recId! }));
-          setMessage({ type: 'success', text: `${projectName} 접근을 허용했습니다.` });
+          setMessage({ type: 'success', text: t('ldAccessGranted', { target: projectName }) });
         } else {
-          setMessage({ type: 'error', text: `${projectName} 허용에 실패했습니다.` });
+          setMessage({ type: 'error', text: t('projectAccessGrantFailed') });
         }
       }
     } finally {
@@ -237,6 +247,12 @@ export function AgentProjectAccessSection({ agentMemberId, projects, canEdit }: 
           </div>
         )}
       </SectionCardBody>
+      <ProjectAccessRevokeDialog target={revokeTarget} onCancel={() => setRevokeTarget(null)}
+        onConfirm={() => {
+          const target = revokeTarget;
+          setRevokeTarget(null);
+          if (target) void handleToggle(target.projectId, target.recordId);
+        }} />
     </SectionCard>
   );
 }
