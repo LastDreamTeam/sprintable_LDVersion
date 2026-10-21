@@ -1,3 +1,8 @@
+【已停止魔改更新】
+LastDreamTeam 已停止对本 Fork 的魔改与维护更新。原因：过于繁杂。
+仓库将归档为只读（read-only）。下文为历史中文说明，不再代表持续维护。
+Archived: LD fork discontinued as too complex/cumbersome.
+
 Sprintable LDVersion 简体中文版本
 整理日期：2026-10-10
 上游基线：fd168be8c1484c04e2a179aeb8d8a7383845226a
