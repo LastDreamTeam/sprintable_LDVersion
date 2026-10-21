@@ -1,10 +1,14 @@
 # Sprintable
 
-> **LDVersion 简体中文与自部署兼容修复**：新增中文界面，保留 English / 한국어；本地头像／文件直传补丁见下文。
-> 安装、验证、上游更新及回滚边界见 [.ld/zh-CN/README.txt](.ld/zh-CN/README.txt)。
-> 此为社区维护的中文 Fork；不包含任何实例的凭据、项目数据或服务器部署配置。
+> **【已停止魔改更新】** LastDreamTeam 已停止对本 Fork（Sprintable LDVersion）的魔改与维护更新。
+> **原因：** 过于繁杂。
+> **仓库状态：** 将归档为只读（read-only）。归档后不再接受推送，也不再交付新的魔改。
+> 下文保留上游说明与历史 LD 改动清单，仅供查阅，不再代表持续维护。历史安装与边界见 [.ld/zh-CN/README.txt](.ld/zh-CN/README.txt)。本仓库不含任何实例的凭据、项目数据或服务器部署配置。
+> Archived: LD fork discontinued as too complex/cumbersome. This repository will be read-only.
 
 ## LDVersion：改动清单、部署边界与升级约定
+
+> 自本说明起，下面的持续交付约定与验收记录只作历史留档。LastDreamTeam 不再继续魔改或维护更新。
 
 ### 持续交付约定与 2026-10-10 本地化修复
 
